@@ -667,6 +667,7 @@ for (const auto & particle_diag : particle_diags) {
         real_flags,
         int_flags,
         real_names, int_names,
+        pc->GetParticlePusherAlgo(),
         pc->getCharge(), pc->getMass(),
         isBTD, isLastBTDFlush);
     }
@@ -704,6 +705,7 @@ WarpXOpenPMDPlot::DumpToFile (ParticleContainer* pc,
                     const amrex::Vector<int>& write_int_comp,
                     const amrex::Vector<std::string>& real_comp_names,
                     const amrex::Vector<std::string>&  int_comp_names,
+                    const ParticlePusherAlgo pusher_algo,
                     amrex::ParticleReal const charge,
                     amrex::ParticleReal const mass,
                     const bool isBTD,
@@ -766,7 +768,9 @@ WarpXOpenPMDPlot::DumpToFile (ParticleContainer* pc,
     }
 
     if (is_last_flush_to_step) {
-        SetConstParticleRecordsEDPIC(currSpecies, positionComponents, NewParticleVectorSize, charge, mass);
+        SetConstParticleRecordsEDPIC(
+            currSpecies, positionComponents, NewParticleVectorSize,
+            pusher_algo, charge, mass);
     }
 
     this->seriesFlush(isBTD);
@@ -1069,6 +1073,7 @@ WarpXOpenPMDPlot::SetConstParticleRecordsEDPIC (
         openPMD::ParticleSpecies& currSpecies,
         std::vector<std::string> const & positionComponents,
         const unsigned long long& np,
+        ParticlePusherAlgo const pusher_algo,
         amrex::ParticleReal const charge,
         amrex::ParticleReal const mass)
 {
@@ -1159,14 +1164,16 @@ WarpXOpenPMDPlot::SetConstParticleRecordsEDPIC (
 #endif
         };
     }());
-    currSpecies.setAttribute("particlePush", []() {
-        switch (WarpX::particle_pusher_algo) {
+    currSpecies.setAttribute("particlePush", [pusher_algo]() {
+        switch (pusher_algo) {
             case ParticlePusherAlgo::Boris :
                 return "Boris";
             case ParticlePusherAlgo::Vay :
                 return "Vay";
             case ParticlePusherAlgo::HigueraCary :
                 return "HigueraCary";
+            case ParticlePusherAlgo::GyroKinetic :
+                return "GyroKinetic";
             default:
                 return "other";
         }

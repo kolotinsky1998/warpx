@@ -217,6 +217,23 @@ PhysicalParticleContainer::PhysicalParticleContainer (AmrCore* amr_core, int isp
     pp_species_name.query("do_not_gather", do_not_gather);
     pp_species_name.query("do_not_push", do_not_push);
 
+    m_particle_pusher_algo = WarpX::particle_pusher_algo;
+    pp_species_name.query_enum_sloppy("particle_pusher", m_particle_pusher_algo, "-_");
+    m_uses_gyrokinetic_pusher = (m_particle_pusher_algo == ParticlePusherAlgo::GyroKinetic);
+
+    if (m_uses_gyrokinetic_pusher) {
+#if !defined(WARPX_DIM_XZ)
+        WARPX_ABORT_WITH_MESSAGE(
+            "Gyrokinetic particle pusher is only available for 2D XZ geometry.");
+#endif
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            WarpX::GetInstance().evolve_scheme == EvolveScheme::Explicit,
+            "Gyrokinetic particle pusher is supported only with algo.evolve_scheme = explicit.");
+        AddRealComp("ux_gc");
+        AddRealComp("uy_gc");
+        AddRealComp("uz_gc");
+    }
+
     pp_species_name.query("do_continuous_injection", do_continuous_injection);
     pp_species_name.query("initialize_self_fields", initialize_self_fields);
     utils::parser::queryWithParser(
@@ -246,17 +263,23 @@ PhysicalParticleContainer::PhysicalParticleContainer (AmrCore* amr_core, int isp
     //Only Boris pusher is compatible with radiation reaction
     WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
         (!do_classical_radiation_reaction) ||
-        WarpX::particle_pusher_algo == ParticlePusherAlgo::Boris,
+        m_particle_pusher_algo == ParticlePusherAlgo::Boris,
         "Radiation reaction can be enabled only if Boris pusher is used");
     //_____________________________
 
 #ifdef WARPX_QED
     pp_species_name.query("do_qed_quantum_sync", m_do_qed_quantum_sync);
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !m_uses_gyrokinetic_pusher || !m_do_qed_quantum_sync,
+        "Gyrokinetic particle pusher is not compatible with QED quantum synchrotron.");
     if (m_do_qed_quantum_sync) {
         AddRealComp("opticalDepthQSR");
     }
 
     pp_species_name.query("do_qed_breit_wheeler", m_do_qed_breit_wheeler);
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !m_uses_gyrokinetic_pusher || !m_do_qed_breit_wheeler,
+        "Gyrokinetic particle pusher is not compatible with QED Breit-Wheeler.");
     if (m_do_qed_breit_wheeler) {
         AddRealComp("opticalDepthBW");
     }
@@ -431,6 +454,22 @@ PhysicalParticleContainer::DefaultInitializeRuntimeAttributes (
 #endif
                                        ionization_initial_level,
                                        0,pinned_tile.numParticles());
+
+    if (m_uses_gyrokinetic_pusher) {
+        auto& soa = pinned_tile.GetStructOfArrays();
+        auto& ux = soa.GetRealData(PIdx::ux);
+        auto& uy = soa.GetRealData(PIdx::uy);
+        auto& uz = soa.GetRealData(PIdx::uz);
+        auto& ux_gc = soa.GetRealData("ux_gc");
+        auto& uy_gc = soa.GetRealData("uy_gc");
+        auto& uz_gc = soa.GetRealData("uz_gc");
+        const long np = pinned_tile.numParticles();
+        for (long i = 0; i < np; ++i) {
+            ux_gc[i] = ux[i];
+            uy_gc[i] = uy[i];
+            uz_gc[i] = uz[i];
+        }
+    }
 }
 
 void
@@ -1175,8 +1214,19 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             const amrex::ParticleReal q = this->charge;
             const amrex::ParticleReal mass = this->m_mass;
 
-            const auto pusher_algo = WarpX::particle_pusher_algo;
+            const auto pusher_algo = m_particle_pusher_algo;
             const auto do_crr = do_classical_radiation_reaction;
+            const bool use_gyrokinetic = m_uses_gyrokinetic_pusher;
+
+            ParticleReal* const AMREX_RESTRICT ux_gc =
+                use_gyrokinetic ? pti.GetAttribs("ux_gc").dataPtr() : nullptr;
+            ParticleReal* const AMREX_RESTRICT uy_gc =
+                use_gyrokinetic ? pti.GetAttribs("uy_gc").dataPtr() : nullptr;
+            ParticleReal* const AMREX_RESTRICT uz_gc =
+                use_gyrokinetic ? pti.GetAttribs("uz_gc").dataPtr() : nullptr;
+
+            amrex::Gpu::DeviceScalar<int> invalid_geometry_flag(0);
+            int* const invalid_geometry_flag_ptr = invalid_geometry_flag.dataPtr();
 
             const auto t_do_not_gather = do_not_gather;
 
@@ -1213,34 +1263,25 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                     getExternalEB(ip, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 }
 
-                if (do_crr) {
-                    amrex::ParticleReal qp = q;
-                    if (ion_lev) { qp *= ion_lev[ip]; }
-                    UpdateMomentumBorisWithRadiationReaction(ux[ip], uy[ip], uz[ip],
-                                                             Exp, Eyp, Ezp, Bxp,
-                                                             Byp, Bzp, qp, mass, dt);
-                } else if (pusher_algo == ParticlePusherAlgo::Boris) {
-                    amrex::ParticleReal qp = q;
-                    if (ion_lev) { qp *= ion_lev[ip]; }
-                    UpdateMomentumBoris( ux[ip], uy[ip], uz[ip],
-                                         Exp, Eyp, Ezp, Bxp,
-                                         Byp, Bzp, qp, mass, dt);
-                } else if (pusher_algo == ParticlePusherAlgo::Vay) {
-                    amrex::ParticleReal qp = q;
-                    if (ion_lev){ qp *= ion_lev[ip]; }
-                    UpdateMomentumVay( ux[ip], uy[ip], uz[ip],
-                                       Exp, Eyp, Ezp, Bxp,
-                                       Byp, Bzp, qp, mass, dt);
-                } else if (pusher_algo == ParticlePusherAlgo::HigueraCary) {
-                    amrex::ParticleReal qp = q;
-                    if (ion_lev){ qp *= ion_lev[ip]; }
-                    UpdateMomentumHigueraCary( ux[ip], uy[ip], uz[ip],
-                                               Exp, Eyp, Ezp, Bxp,
-                                               Byp, Bzp, qp, mass, dt);
-                } else {
-                    amrex::Abort("Unknown particle pusher");
-                }
+                doParticleMomentumPush<0>(ux[ip], uy[ip], uz[ip],
+                                          Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+                                          ion_lev ? ion_lev[ip] : 1,
+                                          mass, q, pusher_algo, do_crr,
+#ifdef WARPX_QED
+                                          0.0,
+#endif
+                                          dt,
+                                          use_gyrokinetic ? &ux_gc[ip] : nullptr,
+                                          use_gyrokinetic ? &uy_gc[ip] : nullptr,
+                                          use_gyrokinetic ? &uz_gc[ip] : nullptr,
+                                          use_gyrokinetic ? invalid_geometry_flag_ptr : nullptr);
             });
+
+            if (m_uses_gyrokinetic_pusher && *(invalid_geometry_flag.copyToHost()) != 0) {
+                WARPX_ABORT_WITH_MESSAGE(
+                    "Gyrokinetic pusher requires B perpendicular to the 2D XZ dynamics plane "
+                    "(Bx≈0, Bz≈0, |By|>0).");
+            }
         }
     }
 }
@@ -1369,8 +1410,18 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     const amrex::ParticleReal q = this->charge;
     const amrex::ParticleReal mass = this->m_mass;
 
-    const auto pusher_algo = WarpX::particle_pusher_algo;
+    const auto pusher_algo = m_particle_pusher_algo;
     const auto do_crr = do_classical_radiation_reaction;
+    const bool use_gyrokinetic = m_uses_gyrokinetic_pusher;
+    ParticleReal* const AMREX_RESTRICT ux_gc =
+        use_gyrokinetic ? pti.GetAttribs("ux_gc").dataPtr() + offset : nullptr;
+    ParticleReal* const AMREX_RESTRICT uy_gc =
+        use_gyrokinetic ? pti.GetAttribs("uy_gc").dataPtr() + offset : nullptr;
+    ParticleReal* const AMREX_RESTRICT uz_gc =
+        use_gyrokinetic ? pti.GetAttribs("uz_gc").dataPtr() + offset : nullptr;
+
+    amrex::Gpu::DeviceScalar<int> invalid_geometry_flag(0);
+    int* const invalid_geometry_flag_ptr = invalid_geometry_flag.dataPtr();
 #ifdef WARPX_QED
     const auto do_sync = m_do_qed_quantum_sync;
     amrex::Real t_chi_max = 0.0;
@@ -1456,7 +1507,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                           ion_lev ? ion_lev[ip] : 1,
                                           mass, q, pusher_algo, do_crr,
                                           t_chi_max,
-                                          dt);
+                                          dt,
+                                          use_gyrokinetic ? &ux_gc[ip] : nullptr,
+                                          use_gyrokinetic ? &uy_gc[ip] : nullptr,
+                                          use_gyrokinetic ? &uz_gc[ip] : nullptr,
+                                          use_gyrokinetic ? invalid_geometry_flag_ptr : nullptr);
             } else {
                 if constexpr (qed_control == has_qed) {
                     doParticleMomentumPush<1>(ux[ip], uy[ip], uz[ip],
@@ -1464,7 +1519,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                               ion_lev ? ion_lev[ip] : 1,
                                               mass, q, pusher_algo, do_crr,
                                               t_chi_max,
-                                              dt);
+                                              dt,
+                                              use_gyrokinetic ? &ux_gc[ip] : nullptr,
+                                              use_gyrokinetic ? &uy_gc[ip] : nullptr,
+                                              use_gyrokinetic ? &uz_gc[ip] : nullptr,
+                                              use_gyrokinetic ? invalid_geometry_flag_ptr : nullptr);
                 }
             }
         }
@@ -1474,7 +1533,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                       Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                       ion_lev ? ion_lev[ip] : 1,
                                       mass, q, pusher_algo, do_crr,
-                                      dt);
+                                      dt,
+                                      use_gyrokinetic ? &ux_gc[ip] : nullptr,
+                                      use_gyrokinetic ? &uy_gc[ip] : nullptr,
+                                      use_gyrokinetic ? &uz_gc[ip] : nullptr,
+                                      use_gyrokinetic ? invalid_geometry_flag_ptr : nullptr);
         }
 #endif
 
@@ -1482,7 +1545,10 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         if (position_push_type == PositionPushType::FirstHalf || position_push_type == PositionPushType::SecondHalf) {
             position_dt *= 0.5_rt;
         }
-        UpdatePosition(xp, yp, zp, ux[ip], uy[ip], uz[ip], position_dt, mass);
+        const auto ux_for_position = use_gyrokinetic ? ux_gc[ip] : ux[ip];
+        const auto uy_for_position = use_gyrokinetic ? uy_gc[ip] : uy[ip];
+        const auto uz_for_position = use_gyrokinetic ? uz_gc[ip] : uz[ip];
+        UpdatePosition(xp, yp, zp, ux_for_position, uy_for_position, uz_for_position, position_dt, mass);
         setPosition(ip, xp, yp, zp);
 
 #ifdef WARPX_QED
@@ -1500,6 +1566,12 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
             amrex::ignore_unused(qed_control);
 #endif
     });
+
+    if (m_uses_gyrokinetic_pusher && *(invalid_geometry_flag.copyToHost()) != 0) {
+        WARPX_ABORT_WITH_MESSAGE(
+            "Gyrokinetic pusher requires B perpendicular to the 2D XZ dynamics plane "
+            "(Bx≈0, Bz≈0, |By|>0).");
+    }
 }
 
 void

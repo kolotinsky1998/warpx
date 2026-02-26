@@ -10,6 +10,7 @@
 // Import low-level single-particle kernels
 #include "Particles/Pusher/UpdateMomentumBoris.H"
 #include "Particles/Pusher/UpdateMomentumBorisWithRadiationReaction.H"
+#include "Particles/Pusher/UpdateMomentumGyroKinetic.H"
 #include "Particles/Pusher/UpdateMomentumHigueraCary.H"
 #include "Particles/Pusher/UpdateMomentumVay.H"
 #include "Particles/WarpXParticleContainer.H"
@@ -29,10 +30,12 @@
  * \param ion_lev                   Ionization level of this particle (0 if ionization not on)
  * \param m                         Mass of this species.
  * \param a_q                       Charge of this species.
- * \param pusher_algo               0: Boris, 1: Vay, 2: HigueraCary
+ * \param pusher_algo               Boris, Vay, HigueraCary, GyroKinetic
  * \param do_crr                    Whether to do the classical radiation reaction
  * \param t_chi_max                 Cutoff chi for QSR
  * \param dt                        Time step size
+ * \param ux_gc,uy_gc,uz_gc         Optional gyrocenter velocity outputs
+ * \param invalid_geometry_flag     Optional strict-geometry error flag for gyrokinetic pusher
  */
 
 template <int do_sync>
@@ -54,7 +57,11 @@ void doParticleMomentumPush(amrex::ParticleReal& ux,
 #ifdef WARPX_QED
                             const amrex::Real t_chi_max,
 #endif
-                            const amrex::Real dt)
+                            const amrex::Real dt,
+                            amrex::ParticleReal* const ux_gc = nullptr,
+                            amrex::ParticleReal* const uy_gc = nullptr,
+                            amrex::ParticleReal* const uz_gc = nullptr,
+                            int* const invalid_geometry_flag = nullptr)
 {
     amrex::ParticleReal qp = a_q;
     qp *= ion_lev;
@@ -96,6 +103,17 @@ void doParticleMomentumPush(amrex::ParticleReal& ux,
         UpdateMomentumHigueraCary( ux, uy, uz,
                                    Ex, Ey, Ez, Bx,
                                    By, Bz, qp, m, dt);
+    } else if (pusher_algo == ParticlePusherAlgo::GyroKinetic) {
+        amrex::ParticleReal local_ux_gc = ux;
+        amrex::ParticleReal local_uy_gc = uy;
+        amrex::ParticleReal local_uz_gc = uz;
+        UpdateMomentumGyroKinetic( ux, uy, uz,
+                                   local_ux_gc, local_uy_gc, local_uz_gc,
+                                   Ex, Ey, Ez, Bx, By, Bz, qp, m, dt,
+                                   invalid_geometry_flag);
+        if (ux_gc != nullptr) { *ux_gc = local_ux_gc; }
+        if (uy_gc != nullptr) { *uy_gc = local_uy_gc; }
+        if (uz_gc != nullptr) { *uz_gc = local_uz_gc; }
     } //else {
 //        amrex::Abort("Unknown particle pusher");
 //    }

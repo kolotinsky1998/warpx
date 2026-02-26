@@ -91,6 +91,12 @@ WarpXParIter::WarpXParIter (ContainerType& pc, int level, MFItInfo& info)
 {
 }
 
+ParticlePusherAlgo
+WarpXParticleContainer::GetParticlePusherAlgo () const
+{
+    return WarpX::particle_pusher_algo;
+}
+
 WarpXParticleContainer::WarpXParticleContainer (AmrCore* amr_core, int ispecies)
     : amrex::ParticleContainerPureSoA<PIdx::nattribs, 0>(amr_core->GetParGDB())
     , species_id(ispecies)
@@ -2377,6 +2383,8 @@ WarpXParticleContainer::PushX (int lev, amrex::Real dt)
 
     // local copy for device lambda capture
     amrex::ParticleReal const mass = this->m_mass;
+    const bool has_gyrocenter_velocity =
+        HasRealComp("ux_gc") && HasRealComp("uy_gc") && HasRealComp("uz_gc");
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -2403,13 +2411,22 @@ WarpXParticleContainer::PushX (int lev, amrex::Real dt)
             ParticleReal* AMREX_RESTRICT ux = attribs[PIdx::ux].dataPtr();
             ParticleReal* AMREX_RESTRICT uy = attribs[PIdx::uy].dataPtr();
             ParticleReal* AMREX_RESTRICT uz = attribs[PIdx::uz].dataPtr();
+            ParticleReal* AMREX_RESTRICT ux_gc = has_gyrocenter_velocity ?
+                pti.GetAttribs("ux_gc").dataPtr() : nullptr;
+            ParticleReal* AMREX_RESTRICT uy_gc = has_gyrocenter_velocity ?
+                pti.GetAttribs("uy_gc").dataPtr() : nullptr;
+            ParticleReal* AMREX_RESTRICT uz_gc = has_gyrocenter_velocity ?
+                pti.GetAttribs("uz_gc").dataPtr() : nullptr;
 
             // Loop over the particles and update their position
             amrex::ParallelFor( pti.numParticles(),
                 [=] AMREX_GPU_DEVICE (long i) {
                                     ParticleReal x, y, z;
                                     GetPosition(i, x, y, z);
-                                    UpdatePosition(x, y, z, ux[i], uy[i], uz[i], dt, mass);
+                                    const auto ux_pos = has_gyrocenter_velocity ? ux_gc[i] : ux[i];
+                                    const auto uy_pos = has_gyrocenter_velocity ? uy_gc[i] : uy[i];
+                                    const auto uz_pos = has_gyrocenter_velocity ? uz_gc[i] : uz[i];
+                                    UpdatePosition(x, y, z, ux_pos, uy_pos, uz_pos, dt, mass);
                                     SetPosition(i, x, y, z);
                 }
             );

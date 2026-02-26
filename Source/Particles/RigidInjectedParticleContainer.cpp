@@ -12,11 +12,8 @@
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/PhysicalParticleContainer.H"
 #include "Particles/WarpXParticleContainer.H"
+#include "Pusher/PushSelector.H"
 #include "Pusher/GetAndSetPosition.H"
-#include "Pusher/UpdateMomentumBoris.H"
-#include "Pusher/UpdateMomentumBorisWithRadiationReaction.H"
-#include "Pusher/UpdateMomentumHigueraCary.H"
-#include "Pusher/UpdateMomentumVay.H"
 #include "RigidInjectedParticleContainer.H"
 #include "Utils/Parser/ParserUtils.H"
 #include "Utils/WarpXAlgorithmSelection.H"
@@ -397,8 +394,35 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
             const amrex::ParticleReal q = this->charge;
             const amrex::ParticleReal mass = this->m_mass;
 
-            const auto pusher_algo = WarpX::particle_pusher_algo;
+            const auto pusher_algo = m_particle_pusher_algo;
             const auto do_crr = do_classical_radiation_reaction;
+            const bool use_gyrokinetic = m_uses_gyrokinetic_pusher;
+
+            ParticleReal* const AMREX_RESTRICT ux_gc =
+                use_gyrokinetic ? pti.GetAttribs("ux_gc").dataPtr() : nullptr;
+            ParticleReal* const AMREX_RESTRICT uy_gc =
+                use_gyrokinetic ? pti.GetAttribs("uy_gc").dataPtr() : nullptr;
+            ParticleReal* const AMREX_RESTRICT uz_gc =
+                use_gyrokinetic ? pti.GetAttribs("uz_gc").dataPtr() : nullptr;
+
+            // Save gyrocenter momenta too, so uninjected particles can be restored consistently
+            amrex::Gpu::DeviceVector<ParticleReal> ux_gc_save_v;
+            amrex::Gpu::DeviceVector<ParticleReal> uy_gc_save_v;
+            amrex::Gpu::DeviceVector<ParticleReal> uz_gc_save_v;
+            ParticleReal* AMREX_RESTRICT ux_gc_save = nullptr;
+            ParticleReal* AMREX_RESTRICT uy_gc_save = nullptr;
+            ParticleReal* AMREX_RESTRICT uz_gc_save = nullptr;
+            if (use_gyrokinetic) {
+                ux_gc_save_v.resize(np);
+                uy_gc_save_v.resize(np);
+                uz_gc_save_v.resize(np);
+                ux_gc_save = ux_gc_save_v.dataPtr();
+                uy_gc_save = uy_gc_save_v.dataPtr();
+                uz_gc_save = uz_gc_save_v.dataPtr();
+            }
+
+            amrex::Gpu::DeviceScalar<int> invalid_geometry_flag(0);
+            int* const invalid_geometry_flag_ptr = invalid_geometry_flag.dataPtr();
 
             enum exteb_flags : int { no_exteb, has_exteb };
 
@@ -411,6 +435,11 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                 ux_save[ip] = uxpp[ip];
                 uy_save[ip] = uypp[ip];
                 uz_save[ip] = uzpp[ip];
+                if (use_gyrokinetic) {
+                    ux_gc_save[ip] = ux_gc[ip];
+                    uy_gc_save[ip] = uy_gc[ip];
+                    uz_gc_save[ip] = uz_gc[ip];
+                }
 
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
@@ -434,28 +463,18 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                     getExternalEB(ip, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 }
 
-                amrex::ParticleReal qp = q;
-                if (ion_lev) { qp *= ion_lev[ip]; }
-
-                if (do_crr) {
-                    UpdateMomentumBorisWithRadiationReaction(uxpp[ip], uypp[ip], uzpp[ip],
-                                                             Exp, Eyp, Ezp, Bxp,
-                                                             Byp, Bzp, qp, mass, dt);
-                } else if (pusher_algo == ParticlePusherAlgo::Boris) {
-                    UpdateMomentumBoris( uxpp[ip], uypp[ip], uzpp[ip],
-                                         Exp, Eyp, Ezp, Bxp,
-                                         Byp, Bzp, qp, mass, dt);
-                } else if (pusher_algo == ParticlePusherAlgo::Vay) {
-                    UpdateMomentumVay( uxpp[ip], uypp[ip], uzpp[ip],
-                                       Exp, Eyp, Ezp, Bxp,
-                                       Byp, Bzp, qp, mass, dt);
-                } else if (pusher_algo == ParticlePusherAlgo::HigueraCary) {
-                    UpdateMomentumHigueraCary( uxpp[ip], uypp[ip], uzpp[ip],
-                                               Exp, Eyp, Ezp, Bxp,
-                                               Byp, Bzp, qp, mass, dt);
-                } else {
-                    amrex::Abort("Unknown particle pusher");
-                }
+                doParticleMomentumPush<0>(uxpp[ip], uypp[ip], uzpp[ip],
+                                          Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+                                          ion_lev ? ion_lev[ip] : 1,
+                                          mass, q, pusher_algo, do_crr,
+#ifdef WARPX_QED
+                                          0.0,
+#endif
+                                          dt,
+                                          use_gyrokinetic ? &ux_gc[ip] : nullptr,
+                                          use_gyrokinetic ? &uy_gc[ip] : nullptr,
+                                          use_gyrokinetic ? &uz_gc[ip] : nullptr,
+                                          use_gyrokinetic ? invalid_geometry_flag_ptr : nullptr);
             });
 
             // Undo the push for particles not injected yet.
@@ -470,10 +489,21 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                     uxpp[i] = ux_save[i];
                     uypp[i] = uy_save[i];
                     uzpp[i] = uz_save[i];
+                    if (use_gyrokinetic) {
+                        ux_gc[i] = ux_gc_save[i];
+                        uy_gc[i] = uy_gc_save[i];
+                        uz_gc[i] = uz_gc_save[i];
+                    }
                 }
             });
 
             amrex::Gpu::synchronize();
+
+            if (m_uses_gyrokinetic_pusher && *(invalid_geometry_flag.copyToHost()) != 0) {
+                WARPX_ABORT_WITH_MESSAGE(
+                    "Gyrokinetic pusher requires B perpendicular to the 2D XZ dynamics plane "
+                    "(Bx≈0, Bz≈0, |By|>0).");
+            }
         }
     }
 }

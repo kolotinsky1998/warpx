@@ -420,6 +420,8 @@ public:
 
     bool doContinuousInjection() const {return do_continuous_injection;}
 
+    [[nodiscard]] virtual ParticlePusherAlgo GetParticlePusherAlgo () const;
+
     // Inject a continuous flux of particles from a defined plane
     virtual void ContinuousFluxInjection(amrex::Real /*t*/, amrex::Real /*dt*/) {}
 

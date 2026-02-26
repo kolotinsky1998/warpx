@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WarpX: схема изменений для GyroKinetic pusher</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --ink: #18212b;
+      --muted: #4b5a68;
+      --accent: #0a7a6a;
+      --accent2: #005ea8;
+      --line: #c7d1da;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #e8f6f3, var(--bg) 45%);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+    .sub {
+      color: var(--muted);
+      margin: 0 0 22px;
+      font-size: 15px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .row {
+      display: grid;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .row.top { grid-template-columns: 1fr 80px 1fr 80px 1fr; }
+    .row.mid { grid-template-columns: 1fr 80px 1fr; }
+    .row.bot { grid-template-columns: 1fr 80px 1fr 80px 1fr; }
+
+    .arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent2);
+      font-size: 26px;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      min-height: 170px;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    .card p {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .files {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .logic {
+      margin-top: 22px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .logic h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .logic ol {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .legend {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    code {
+      background: #f1f4f7;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .row.top, .row.mid, .row.bot { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); min-height: 28px; }
+      .card { min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>WarpX: что было изменено для GyroKinetic pusher</h1>
+    <p class="sub">Схема реализованной логики: <b>2D XZ</b>, <b>B<sub>y</sub> перпендикулярен плоскости</b>, electrons = gyrokinetic, ions = boris (per-species override).</p>
+
+    <section class="flow">
+      <div class="row top">
+        <article class="card">
+          <h2>1) Конфигурация алгоритмов</h2>
+          <p>Добавлен новый тип пушера и алиасы в enum.</p>
+          <ul class="files">
+            <li><code>Source/Utils/WarpXAlgorithmSelection.H</code></li>
+          </ul>
+        </article>
+        <div class="arrow">→</div>
+        <article class="card">
+          <h2>2) Ядро gyro-pusher</h2>
+          <p>Новый kernel с вычислением <code>u_gc</code>, полной скорости и strict-check геометрии поля.</p>
+          <ul class="files">
+            <li><code>Source/Particles/Pusher/UpdateMomentumGyroKinetic.H</code></li>
+            <li><code>Source/Particles/Pusher/PushSelector.H</code></li>
+          </ul>
+        </article>
+        <div class="arrow">→</div>
+        <article class="card">
+          <h2>3) Per-species выбор пушера</h2>
+          <p>Добавлен <code>&lt;species&gt;.particle_pusher</code>, runtime-атрибуты <code>ux_gc/uy_gc/uz_gc</code>, проверки совместимости.</p>
+          <ul class="files">
+            <li><code>Source/Particles/PhysicalParticleContainer.H</code></li>
+            <li><code>Source/Particles/PhysicalParticleContainer.cpp</code></li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="row mid">
+        <article class="card">
+          <h2>4) Push-пути</h2>
+          <p>Обычный и rigid-пути переведены на selector + per-species pusher, position update для gyro идёт по <code>u_gc</code>.</p>
+          <ul class="files">
+            <li><code>Source/Particles/PhysicalParticleContainer.cpp</code></li>
+            <li><code>Source/Particles/RigidInjectedParticleContainer.cpp</code></li>
+          </ul>
+        </article>
+        <div class="arrow">→</div>
+        <article class="card">
+          <h2>5) Синхронизация позиций (PushX)</h2>
+          <p>Если у species есть <code>ux_gc/uy_gc/uz_gc</code>, полушаг позиции использует их, иначе стандартные <code>ux/uy/uz</code>.</p>
+          <ul class="files">
+            <li><code>Source/Particles/WarpXParticleContainer.H</code></li>
+            <li><code>Source/Particles/WarpXParticleContainer.cpp</code></li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="row bot">
+        <article class="card">
+          <h2>6) Диагностики и metadata</h2>
+          <p>openPMD теперь пишет <code>particlePush</code> по конкретному species (включая <code>GyroKinetic</code>).</p>
+          <ul class="files">
+            <li><code>Source/Diagnostics/WarpXOpenPMD.H</code></li>
+            <li><code>Source/Diagnostics/WarpXOpenPMD.cpp</code></li>
+          </ul>
+        </article>
+        <div class="arrow">→</div>
+        <article class="card">
+          <h2>7) Пользовательские интерфейсы</h2>
+          <p>Обновлены docs + PICMI по новому значению <code>gyrokinetic</code> и per-species override.</p>
+          <ul class="files">
+            <li><code>Docs/source/usage/parameters.rst</code></li>
+            <li><code>Python/pywarpx/picmi.py</code></li>
+            <li><code>Source/Initialization/WarpXInitData.cpp</code></li>
+          </ul>
+        </article>
+        <div class="arrow">→</div>
+        <article class="card">
+          <h2>8) Regression tests</h2>
+          <p>Добавлен mixed-case тест + negative-тест на invalid B (ожидаемый fail).</p>
+          <ul class="files">
+            <li><code>Examples/Tests/gyro_pusher_2d_mixed/*</code></li>
+            <li><code>Examples/Tests/CMakeLists.txt</code></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="logic">
+      <h3>Логика изменений (по шагам выполнения)</h3>
+      <ol>
+        <li>Парсинг: глобальный <code>algo.particle_pusher</code> + локальный <code>&lt;species&gt;.particle_pusher</code>.</li>
+        <li>Для gyro-species создаются runtime-атрибуты скорости гироцентра <code>u_gc</code>.</li>
+        <li>В push-кернеле считаются: <code>v_E</code>, разложение на <code>v_parallel/v_perp</code>, поворот <code>v_perp</code>, затем <code>v_gc</code> и полная <code>v</code>.</li>
+        <li>Положение particles для gyro-species обновляется по <code>u_gc</code>; импульс <code>ux/uy/uz</code> остаётся полной скоростью.</li>
+        <li>Strict-check: если поле не удовлетворяет <code>Bx≈0, Bz≈0, |By|&gt;0</code>, симуляция аварийно завершается.</li>
+        <li>openPMD metadata отражает реальный выбранный pusher на уровне species.</li>
+      </ol>
+    </section>
+
+    <p class="legend">Файл создан для визуального обзора изменений: <code>gyrokinetic_changes_map.html</code>.</p>
+  </div>
+</body>
+</html>

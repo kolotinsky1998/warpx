@@ -2511,8 +2511,17 @@ Particle push, charge and current deposition, field gathering
      - ``boris``: Boris pusher.
      - ``vay``: Vay pusher (see :cite:t:`param-Vaypop2008`)
      - ``higuera``: Higuera-Cary pusher (see :cite:t:`param-HigueraPOP2017`)
+     - ``gyrokinetic`` (or ``gyro``): gyrokinetic pusher for strongly magnetized
+       particles in ``2D (XZ)`` with magnetic field perpendicular to the dynamics
+       plane (``Bx≈0``, ``Bz≈0``, ``|By|>0``). WarpX enforces these assumptions
+       at runtime and aborts if they are violated.
 
      If ``algo.particle_pusher`` is not specified, ``boris`` is the default.
+
+* ``<species_name>.particle_pusher`` (`string`, optional)
+    Optional per-species override for the pusher algorithm. If set, it overrides
+    ``algo.particle_pusher`` only for that species. Supported values are:
+    ``boris``, ``vay``, ``higuera``, ``gyrokinetic``.
 
 * ``algo.particle_shape`` (`integer`; `1`, `2`, `3`, or `4`)
     The order of the shape factors (splines) for the macro-particles along all spatial directions: `1` for linear, `2` for quadratic, `3` for cubic, `4` for quartic.

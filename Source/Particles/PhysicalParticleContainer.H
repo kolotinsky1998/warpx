@@ -205,6 +205,11 @@ public:
 
     void SplitParticles (int lev);
 
+    [[nodiscard]] ParticlePusherAlgo GetParticlePusherAlgo () const override
+    {
+        return m_particle_pusher_algo;
+    }
+
     IonizationFilterFunc getIonizationFunc (const WarpXParIter& pti,
                                             int lev,
                                             amrex::IntVect ngEB,
@@ -478,6 +483,9 @@ protected:
     //When true PhysicalParticleContainer tries to use a pusher including
     //radiation reaction
     bool do_classical_radiation_reaction = false;
+
+    ParticlePusherAlgo m_particle_pusher_algo = ParticlePusherAlgo::Default;
+    bool m_uses_gyrokinetic_pusher = false;
 
     // A flag to enable saving of the previous timestep positions
     bool m_save_previous_position = false;

@@ -75,7 +75,10 @@ AMREX_ENUM(ParticlePusherAlgo,
            Boris,
            Vay,
            HigueraCary,
+           GyroKinetic,
            higuera = HigueraCary,
+           gyrokinetic = GyroKinetic,
+           gyro = GyroKinetic,
            Default = Boris);
 
 AMREX_ENUM(CurrentDepositionAlgo,

@@ -613,6 +613,29 @@ WarpX::PrintMainPICparameters ()
     else if (particle_pusher_algo == ParticlePusherAlgo::Boris){
       amrex::Print() << "Particle Pusher:      | Boris \n";
     }
+    else if (particle_pusher_algo == ParticlePusherAlgo::GyroKinetic){
+      amrex::Print() << "Particle Pusher:      | GyroKinetic \n";
+    }
+
+    {
+      const ParmParse pp_particles("particles");
+      std::vector<std::string> species_names;
+      pp_particles.queryarr("species_names", species_names);
+      bool has_species_override = false;
+      for (auto const& name : species_names) {
+        const ParmParse pp_species(name);
+        ParticlePusherAlgo species_algo = particle_pusher_algo;
+        if (pp_species.query_enum_sloppy("particle_pusher", species_algo, "-_")
+            && species_algo != particle_pusher_algo)
+        {
+            has_species_override = true;
+            break;
+        }
+      }
+      if (has_species_override) {
+        amrex::Print() << "                      | Note: one or more species override particle pusher\n";
+      }
+    }
     // Print type of charge deposition
     if (charge_deposition_algo == ChargeDepositionAlgo::Standard){
       amrex::Print() << "Charge Deposition:    | standard \n";

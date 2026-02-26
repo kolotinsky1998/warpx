@@ -267,6 +267,7 @@ private:
    * @param[in] currSpecies Corresponding openPMD species
    * @param[in] positionComponents user-selected components of the particle position
    * @param[in] np          Number of particles
+   * @param[in] pusher_algo Pusher algorithm used by this species
    * @param[in] charge      Charge of the particles (note: fix for ions)
    * @param[in] mass        Mass of the particles
    */
@@ -274,6 +275,7 @@ private:
         openPMD::ParticleSpecies& currSpecies,
         std::vector<std::string> const & positionComponents,
         const unsigned long long& np,
+        ParticlePusherAlgo pusher_algo,
         amrex::ParticleReal charge,
         amrex::ParticleReal mass);
 
@@ -323,6 +325,7 @@ private:
    * @param[in] write_int_comp The int attribute ids, from WarpX
    * @param[in] real_comp_names The real attribute names, from WarpX
    * @param[in] int_comp_names The int attribute names, from WarpX
+   * @param[in] pusher_algo Pusher algorithm used by this species
    * @param[in] charge         Charge of the particles (note: fix for ions)
    * @param[in] mass           Mass of the particles
    * @param[in] isBTD is this a backtransformed diagnostics (BTD) write?
@@ -335,6 +338,7 @@ private:
             const amrex::Vector<int>& write_int_comp,
             const amrex::Vector<std::string>& real_comp_names,
             const amrex::Vector<std::string>&  int_comp_names,
+            ParticlePusherAlgo pusher_algo,
             amrex::ParticleReal charge,
             amrex::ParticleReal mass,
             bool isBTD = false,
