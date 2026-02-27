@@ -499,7 +499,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
 
             amrex::Gpu::synchronize();
 
-            if (m_uses_gyrokinetic_pusher && *(invalid_geometry_flag.copyToHost()) != 0) {
+            if (m_uses_gyrokinetic_pusher && invalid_geometry_flag.dataValue() != 0) {
                 WARPX_ABORT_WITH_MESSAGE(
                     "Gyrokinetic pusher requires B perpendicular to the 2D XZ dynamics plane "
                     "(Bx≈0, Bz≈0, |By|>0).");

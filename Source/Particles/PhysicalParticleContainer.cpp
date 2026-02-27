@@ -1277,7 +1277,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                           use_gyrokinetic ? invalid_geometry_flag_ptr : nullptr);
             });
 
-            if (m_uses_gyrokinetic_pusher && *(invalid_geometry_flag.copyToHost()) != 0) {
+            if (m_uses_gyrokinetic_pusher && invalid_geometry_flag.dataValue() != 0) {
                 WARPX_ABORT_WITH_MESSAGE(
                     "Gyrokinetic pusher requires B perpendicular to the 2D XZ dynamics plane "
                     "(Bx≈0, Bz≈0, |By|>0).");
@@ -1567,7 +1567,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 #endif
     });
 
-    if (m_uses_gyrokinetic_pusher && *(invalid_geometry_flag.copyToHost()) != 0) {
+    if (m_uses_gyrokinetic_pusher && invalid_geometry_flag.dataValue() != 0) {
         WARPX_ABORT_WITH_MESSAGE(
             "Gyrokinetic pusher requires B perpendicular to the 2D XZ dynamics plane "
             "(Bx≈0, Bz≈0, |By|>0).");
