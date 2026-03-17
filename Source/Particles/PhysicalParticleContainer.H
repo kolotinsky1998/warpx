@@ -210,6 +210,82 @@ public:
         return m_particle_pusher_algo;
     }
 
+    void ApplyHotCathodeSource (int lev, amrex::Real dt);
+
+    void ApplyColdCathodeSink (int lev, long step);
+
+    void EmitColdCathodeSecondaries (
+        int lev,
+        amrex::Long num_to_emit,
+        amrex::Real rmin,
+        amrex::Real rmax,
+        amrex::Real xc,
+        amrex::Real zc,
+        amrex::Real energy_eV,
+        amrex::Real macro_weight);
+
+    [[nodiscard]] bool HasHotCathodeSource () const noexcept
+    {
+        return m_has_hot_cathode_source;
+    }
+
+    [[nodiscard]] bool HasColdCathodeSink () const noexcept
+    {
+        return m_has_cold_cathode_sink;
+    }
+
+    [[nodiscard]] bool HasColdCathodeSecondaryEmission () const noexcept
+    {
+        return m_has_cold_cathode_secondary_emission;
+    }
+
+    [[nodiscard]] std::string const& GetColdCathodeSecondaryProductName () const noexcept
+    {
+        return m_cold_secondary_product_name;
+    }
+
+    void SetColdCathodeSecondaryProductSpeciesID (int id) noexcept
+    {
+        m_cold_secondary_product_species_id = id;
+    }
+
+    [[nodiscard]] int GetColdCathodeSecondaryProductSpeciesID () const noexcept
+    {
+        return m_cold_secondary_product_species_id;
+    }
+
+    [[nodiscard]] amrex::Long ComputeColdCathodeSecondaryMacroParticles () noexcept;
+
+    [[nodiscard]] amrex::Real GetColdCathodeSecondaryRMin () const noexcept
+    {
+        return m_cold_secondary_rmin;
+    }
+
+    [[nodiscard]] amrex::Real GetColdCathodeSecondaryRMax () const noexcept
+    {
+        return m_cold_secondary_rmax;
+    }
+
+    [[nodiscard]] amrex::Real GetColdCathodeSecondaryXCenter () const noexcept
+    {
+        return m_cold_secondary_xc;
+    }
+
+    [[nodiscard]] amrex::Real GetColdCathodeSecondaryZCenter () const noexcept
+    {
+        return m_cold_secondary_zc;
+    }
+
+    [[nodiscard]] amrex::Real GetColdCathodeSecondaryEnergyEV () const noexcept
+    {
+        return m_cold_secondary_energy_eV;
+    }
+
+    [[nodiscard]] amrex::Real GetColdCathodeSecondaryMacroWeight () const noexcept
+    {
+        return m_cold_secondary_macro_weight;
+    }
+
     IonizationFilterFunc getIonizationFunc (const WarpXParIter& pti,
                                             int lev,
                                             amrex::IntVect ngEB,
@@ -486,6 +562,40 @@ protected:
 
     ParticlePusherAlgo m_particle_pusher_algo = ParticlePusherAlgo::Default;
     bool m_uses_gyrokinetic_pusher = false;
+
+    bool m_has_hot_cathode_source = false;
+    amrex::Real m_hot_cathode_rmin = 0.0;
+    amrex::Real m_hot_cathode_rmax = 0.0;
+    amrex::Real m_hot_cathode_xc = 0.0;
+    amrex::Real m_hot_cathode_zc = 0.0;
+    amrex::Real m_hot_cathode_energy_eV = 0.0;
+    amrex::Real m_hot_cathode_macro_weight = 0.0;
+    int m_hot_cathode_interval = 1;
+    int m_hot_cathode_npart_per_injection = 0;
+    amrex::Real m_hot_cathode_current = 0.0;
+    amrex::Real m_hot_cathode_fractional_macro_accum = 0.0;
+
+    bool m_has_cold_cathode_sink = false;
+    amrex::Real m_cold_cathode_rmin = 0.0;
+    amrex::Real m_cold_cathode_rmax = 0.0;
+    amrex::Real m_cold_cathode_xc = 0.0;
+    amrex::Real m_cold_cathode_zc = 0.0;
+    int m_cold_cathode_interval = 1;
+    int m_cold_cathode_nremove = 0;
+    amrex::Real m_cold_cathode_removed_weight_accum = 0.0;
+    amrex::Long m_cold_cathode_removed_count_accum = 0;
+
+    bool m_has_cold_cathode_secondary_emission = false;
+    amrex::Real m_cold_secondary_rmin = 0.0;
+    amrex::Real m_cold_secondary_rmax = 0.0;
+    amrex::Real m_cold_secondary_xc = 0.0;
+    amrex::Real m_cold_secondary_zc = 0.0;
+    amrex::Real m_cold_secondary_energy_eV = 0.0;
+    amrex::Real m_cold_secondary_gamma = 0.0;
+    amrex::Real m_cold_secondary_macro_weight = 0.0;
+    amrex::Real m_cold_secondary_fractional_macro_accum = 0.0;
+    std::string m_cold_secondary_product_name;
+    int m_cold_secondary_product_species_id = -1;
 
     // A flag to enable saving of the previous timestep positions
     bool m_save_previous_position = false;

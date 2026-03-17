@@ -109,12 +109,50 @@
 #include <cstdlib>
 #include <limits>
 #include <map>
+#include <numeric>
 #include <random>
 #include <string>
 #include <utility>
 #include <vector>
 
 using namespace amrex;
+
+namespace
+{
+    struct RingSinkCandidate
+    {
+        int tile_index;
+        long particle_index;
+    };
+
+    [[nodiscard]] amrex::Long
+    compute_macro_particles_from_current (
+        amrex::Real current,
+        amrex::Real dt,
+        int interval,
+        amrex::Real macro_weight,
+        amrex::Real& fractional_accum,
+        amrex::Real charge_magnitude)
+    {
+        if (current <= 0.0 || dt <= 0.0 || interval <= 0 || macro_weight <= 0.0 || charge_magnitude <= 0.0) {
+            return 0;
+        }
+
+        const amrex::Real real_particles = current * dt * static_cast<amrex::Real>(interval)
+            / (charge_magnitude * macro_weight);
+        const amrex::Real macro_particles = real_particles + fractional_accum;
+        const auto integer_part = static_cast<amrex::Long>(std::floor(macro_particles));
+        fractional_accum = macro_particles - static_cast<amrex::Real>(integer_part);
+        return integer_part;
+    }
+
+    [[nodiscard]] amrex::Real
+    uniform_ring_radius (amrex::Real rmin, amrex::Real rmax)
+    {
+        const amrex::Real xi = amrex::Random();
+        return std::sqrt(rmin*rmin + xi*(rmax*rmax - rmin*rmin));
+    }
+}
 
 PhysicalParticleContainer::PhysicalParticleContainer (AmrCore* amr_core, int ispecies,
                                                       const std::string& name)
@@ -232,6 +270,113 @@ PhysicalParticleContainer::PhysicalParticleContainer (AmrCore* amr_core, int isp
         AddRealComp("ux_gc");
         AddRealComp("uy_gc");
         AddRealComp("uz_gc");
+    }
+
+    pp_species_name.query("cathode_hot_source", m_has_hot_cathode_source);
+    if (m_has_hot_cathode_source) {
+        std::vector<amrex::Real> center(2, 0.0);
+        utils::parser::queryWithParser(pp_species_name, "cathode_hot_rmin", m_hot_cathode_rmin);
+        utils::parser::queryWithParser(pp_species_name, "cathode_hot_rmax", m_hot_cathode_rmax);
+        pp_species_name.queryarr("cathode_hot_center", center);
+        pp_species_name.query("cathode_hot_interval", m_hot_cathode_interval);
+        pp_species_name.query("cathode_hot_npart_per_injection", m_hot_cathode_npart_per_injection);
+        utils::parser::queryWithParser(pp_species_name, "cathode_hot_current", m_hot_cathode_current);
+        utils::parser::queryWithParser(pp_species_name, "cathode_hot_energy_eV", m_hot_cathode_energy_eV);
+        utils::parser::queryWithParser(pp_species_name, "cathode_hot_macro_weight", m_hot_cathode_macro_weight);
+        m_hot_cathode_xc = center[0];
+        m_hot_cathode_zc = center[1];
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_hot_cathode_rmax > m_hot_cathode_rmin,
+            species_name + ": cathode_hot_rmax must be larger than cathode_hot_rmin.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_hot_cathode_interval > 0,
+            species_name + ": cathode_hot_interval must be > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_hot_cathode_energy_eV > 0.0,
+            species_name + ": cathode_hot_energy_eV must be > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_hot_cathode_macro_weight > 0.0,
+            species_name + ": cathode_hot_macro_weight must be > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_hot_cathode_npart_per_injection > 0 ||
+                (m_hot_cathode_current > 0.0 && m_hot_cathode_macro_weight > 0.0),
+            species_name + ": hot cathode source requires either cathode_hot_npart_per_injection > 0 "
+            "or both cathode_hot_current > 0 and cathode_hot_macro_weight > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            charge < 0.0,
+            species_name + ": cathode_hot_source is intended for negatively charged species.");
+    }
+
+    pp_species_name.query("cathode_cold_sink", m_has_cold_cathode_sink);
+    if (m_has_cold_cathode_sink) {
+        std::vector<amrex::Real> center(2, 0.0);
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_rmin", m_cold_cathode_rmin);
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_rmax", m_cold_cathode_rmax);
+        pp_species_name.queryarr("cathode_cold_center", center);
+        pp_species_name.query("cathode_cold_interval", m_cold_cathode_interval);
+        pp_species_name.query("cathode_cold_nremove", m_cold_cathode_nremove);
+        m_cold_cathode_xc = center[0];
+        m_cold_cathode_zc = center[1];
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_cathode_rmax > m_cold_cathode_rmin,
+            species_name + ": cathode_cold_rmax must be larger than cathode_cold_rmin.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_cathode_interval > 0,
+            species_name + ": cathode_cold_interval must be > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_cathode_nremove >= 0,
+            species_name + ": cathode_cold_nremove must be >= 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            charge > 0.0,
+            species_name + ": cathode_cold_sink is intended for positively charged species.");
+    }
+
+    pp_species_name.query("cathode_cold_secondary_emission", m_has_cold_cathode_secondary_emission);
+    if (m_has_cold_cathode_secondary_emission) {
+        std::vector<amrex::Real> center(2, 0.0);
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_secondary_rmin", m_cold_secondary_rmin);
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_secondary_rmax", m_cold_secondary_rmax);
+        if (pp_species_name.contains("cathode_cold_secondary_center")) {
+            pp_species_name.queryarr("cathode_cold_secondary_center", center);
+        } else if (m_has_cold_cathode_sink) {
+            center[0] = m_cold_cathode_xc;
+            center[1] = m_cold_cathode_zc;
+        }
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_secondary_gamma", m_cold_secondary_gamma);
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_secondary_energy_eV", m_cold_secondary_energy_eV);
+        utils::parser::queryWithParser(pp_species_name, "cathode_cold_secondary_macro_weight", m_cold_secondary_macro_weight);
+        pp_species_name.query("cathode_cold_secondary_product_species", m_cold_secondary_product_name);
+        m_cold_secondary_xc = center[0];
+        m_cold_secondary_zc = center[1];
+        if (m_cold_secondary_rmax <= m_cold_secondary_rmin && m_has_cold_cathode_sink) {
+            m_cold_secondary_rmin = m_cold_cathode_rmin;
+            m_cold_secondary_rmax = m_cold_cathode_rmax;
+        }
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_secondary_rmax > m_cold_secondary_rmin,
+            species_name + ": cathode_cold_secondary_rmax must be larger than cathode_cold_secondary_rmin.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_secondary_gamma >= 0.0,
+            species_name + ": cathode_cold_secondary_gamma must be >= 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_secondary_energy_eV > 0.0,
+            species_name + ": cathode_cold_secondary_energy_eV must be > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_cold_secondary_macro_weight > 0.0,
+            species_name + ": cathode_cold_secondary_macro_weight must be > 0.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            !m_cold_secondary_product_name.empty(),
+            species_name + ": cathode_cold_secondary_product_species must be specified.");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            charge > 0.0,
+            species_name + ": cathode_cold_secondary_emission should be attached to the ion sink species.");
+    }
+
+    if (m_has_hot_cathode_source || m_has_cold_cathode_sink || m_has_cold_cathode_secondary_emission) {
+#if !defined(WARPX_DIM_XZ)
+        WARPX_ABORT_WITH_MESSAGE(
+            "Cathode source/sink models are currently only implemented for 2D XZ geometry.");
+#endif
     }
 
     pp_species_name.query("do_continuous_injection", do_continuous_injection);
@@ -852,6 +997,152 @@ PhysicalParticleContainer::Evolve (ablastr::fields::MultiFabRegister& fields,
     if (split_particles) {
         SplitParticles(lev);
     }
+}
+
+void
+PhysicalParticleContainer::ApplyHotCathodeSource (int lev, amrex::Real dt)
+{
+    if (!m_has_hot_cathode_source || lev != 0) { return; }
+
+    const long step = WarpX::GetInstance().getistep(lev);
+    if (step % m_hot_cathode_interval != 0) { return; }
+
+    amrex::Long num_to_emit = static_cast<amrex::Long>(m_hot_cathode_npart_per_injection);
+    if (num_to_emit <= 0) {
+        num_to_emit = compute_macro_particles_from_current(
+            m_hot_cathode_current, dt, m_hot_cathode_interval,
+            m_hot_cathode_macro_weight, m_hot_cathode_fractional_macro_accum, std::abs(charge));
+    }
+    if (num_to_emit <= 0) { return; }
+
+    amrex::Vector<amrex::ParticleReal> xp(num_to_emit);
+    amrex::Vector<amrex::ParticleReal> yp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::ParticleReal> zp(num_to_emit);
+    amrex::Vector<amrex::ParticleReal> uxp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::ParticleReal> uyp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::ParticleReal> uzp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::Vector<amrex::ParticleReal>> attr_real(1);
+    attr_real[0].resize(num_to_emit, m_hot_cathode_macro_weight);
+    amrex::Vector<amrex::Vector<int>> attr_int;
+
+    constexpr auto eV_to_J = PhysConst::q_e;
+    const amrex::ParticleReal speed = std::sqrt(2.0_prt * m_hot_cathode_energy_eV * eV_to_J / m_mass);
+
+    for (amrex::Long i = 0; i < num_to_emit; ++i) {
+        const amrex::ParticleReal radius = uniform_ring_radius(m_hot_cathode_rmin, m_hot_cathode_rmax);
+        const amrex::ParticleReal theta = 2.0_prt * MathConst::pi * amrex::Random();
+        xp[i] = m_hot_cathode_xc + radius * std::cos(theta);
+        zp[i] = m_hot_cathode_zc + radius * std::sin(theta);
+        uyp[i] = speed;
+    }
+
+    AddNParticles(lev, num_to_emit, xp, yp, zp, uxp, uyp, uzp, 1, attr_real, 0, attr_int);
+}
+
+void
+PhysicalParticleContainer::ApplyColdCathodeSink (int lev, long step)
+{
+    if (!m_has_cold_cathode_sink || lev != 0 || m_cold_cathode_nremove <= 0) { return; }
+    if (step % m_cold_cathode_interval != 0) { return; }
+
+    amrex::Vector<amrex::ParticleReal> weights;
+    std::vector<RingSinkCandidate> candidates;
+    std::vector<ParticleTileType*> candidate_tiles;
+
+    for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti) {
+        ParticleTileType& ptile = ParticlesAt(lev, pti);
+        auto& soa = ptile.GetStructOfArrays();
+        auto * const AMREX_RESTRICT xp = soa.GetRealData(PIdx::x).data();
+        auto * const AMREX_RESTRICT zp = soa.GetRealData(PIdx::z).data();
+        auto * const AMREX_RESTRICT wp = soa.GetRealData(PIdx::w).data();
+        const long np = ptile.numParticles();
+        const int tile_idx = static_cast<int>(candidate_tiles.size());
+        candidate_tiles.push_back(&ptile);
+
+        for (long i = 0; i < np; ++i) {
+            const amrex::ParticleReal dx = xp[i] - m_cold_cathode_xc;
+            const amrex::ParticleReal dz = zp[i] - m_cold_cathode_zc;
+            const amrex::ParticleReal r = std::sqrt(dx*dx + dz*dz);
+            if (r >= m_cold_cathode_rmin && r < m_cold_cathode_rmax) {
+                candidates.push_back({tile_idx, i});
+                weights.push_back(wp[i]);
+            }
+        }
+    }
+
+    if (candidates.empty()) { return; }
+
+    std::vector<std::size_t> order(candidates.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::mt19937 rng(static_cast<std::uint32_t>(step + 7919 * (species_id + 1)));
+    std::shuffle(order.begin(), order.end(), rng);
+
+    const auto nremove = static_cast<std::size_t>(std::min<amrex::Long>(
+        static_cast<amrex::Long>(candidates.size()), m_cold_cathode_nremove));
+    for (std::size_t k = 0; k < nremove; ++k) {
+        auto const idx = order[k];
+        auto * tile = candidate_tiles[candidates[idx].tile_index];
+        auto& idcpu = tile->GetStructOfArrays().GetIdCPUData();
+        idcpu[candidates[idx].particle_index] = amrex::ParticleIdCpus::Invalid;
+        m_cold_cathode_removed_weight_accum += weights[idx];
+        ++m_cold_cathode_removed_count_accum;
+    }
+
+    deleteInvalidParticles();
+}
+
+amrex::Long
+PhysicalParticleContainer::ComputeColdCathodeSecondaryMacroParticles () noexcept
+{
+    if (!m_has_cold_cathode_secondary_emission || m_cold_secondary_macro_weight <= 0.0) {
+        return 0;
+    }
+
+    const amrex::Real macro_particles = m_cold_secondary_gamma
+        * m_cold_cathode_removed_weight_accum / m_cold_secondary_macro_weight
+        + m_cold_secondary_fractional_macro_accum;
+    const auto integer_part = static_cast<amrex::Long>(std::floor(macro_particles));
+    m_cold_secondary_fractional_macro_accum = macro_particles - static_cast<amrex::Real>(integer_part);
+    m_cold_cathode_removed_weight_accum = 0.0_prt;
+    m_cold_cathode_removed_count_accum = 0;
+    return integer_part;
+}
+
+void
+PhysicalParticleContainer::EmitColdCathodeSecondaries (
+    int lev,
+    amrex::Long num_to_emit,
+    amrex::Real rmin,
+    amrex::Real rmax,
+    amrex::Real xc,
+    amrex::Real zc,
+    amrex::Real energy_eV,
+    amrex::Real macro_weight)
+{
+    if (lev != 0 || num_to_emit <= 0 || macro_weight <= 0.0) { return; }
+
+    amrex::Vector<amrex::ParticleReal> xp(num_to_emit);
+    amrex::Vector<amrex::ParticleReal> yp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::ParticleReal> zp(num_to_emit);
+    amrex::Vector<amrex::ParticleReal> uxp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::ParticleReal> uyp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::ParticleReal> uzp(num_to_emit, 0.0_prt);
+    amrex::Vector<amrex::Vector<amrex::ParticleReal>> attr_real(1);
+    attr_real[0].resize(num_to_emit, macro_weight);
+    amrex::Vector<amrex::Vector<int>> attr_int;
+
+    constexpr auto eV_to_J = PhysConst::q_e;
+    const amrex::ParticleReal speed = std::sqrt(2.0_prt * energy_eV * eV_to_J / m_mass);
+
+    for (amrex::Long i = 0; i < num_to_emit; ++i) {
+        const amrex::ParticleReal radius = uniform_ring_radius(rmin, rmax);
+        const amrex::ParticleReal theta = 2.0_prt * MathConst::pi * amrex::Random();
+        xp[i] = xc + radius * std::cos(theta);
+        zp[i] = zc + radius * std::sin(theta);
+        uyp[i] = speed;
+    }
+
+    AddNParticles(lev, num_to_emit, xp, yp, zp, uxp, uyp, uzp, 1, attr_real, 0, attr_int);
 }
 
 void

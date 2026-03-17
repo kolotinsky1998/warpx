@@ -506,8 +506,59 @@ MultiParticleContainer::Evolve (ablastr::fields::MultiFabRegister& fields,
             }
         }
     }
+
+    for (auto& pc : allcontainers) {
+        auto* phys_pc = dynamic_cast<PhysicalParticleContainer*>(pc.get());
+        if (phys_pc == nullptr || !phys_pc->HasHotCathodeSource()) {
+            continue;
+        }
+        phys_pc->ApplyHotCathodeSource(lev, dt);
+    }
+
     for (auto& pc : allcontainers) {
         pc->Evolve(fields, lev, current_fp_string, t, dt, subcycling_half, skip_deposition, position_push_type, momentum_push_type, implicit_options);
+    }
+
+    long const step = WarpX::GetInstance().getistep(lev);
+
+    for (auto& pc : allcontainers) {
+        auto* phys_pc = dynamic_cast<PhysicalParticleContainer*>(pc.get());
+        if (phys_pc == nullptr || !phys_pc->HasColdCathodeSink()) {
+            continue;
+        }
+        phys_pc->ApplyColdCathodeSink(lev, step);
+    }
+
+    for (auto& pc : allcontainers) {
+        auto* sink_pc = dynamic_cast<PhysicalParticleContainer*>(pc.get());
+        if (sink_pc == nullptr || !sink_pc->HasColdCathodeSecondaryEmission()) {
+            continue;
+        }
+
+        int const product_id = sink_pc->GetColdCathodeSecondaryProductSpeciesID();
+        if (product_id < 0 || product_id >= static_cast<int>(allcontainers.size())) {
+            continue;
+        }
+
+        auto* product_pc = dynamic_cast<PhysicalParticleContainer*>(allcontainers[product_id].get());
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            product_pc != nullptr,
+            "Cold cathode secondary emission product species must be a physical particle species");
+
+        amrex::Long const num_to_emit = sink_pc->ComputeColdCathodeSecondaryMacroParticles();
+        if (num_to_emit <= 0) {
+            continue;
+        }
+
+        product_pc->EmitColdCathodeSecondaries(
+            lev,
+            num_to_emit,
+            sink_pc->GetColdCathodeSecondaryRMin(),
+            sink_pc->GetColdCathodeSecondaryRMax(),
+            sink_pc->GetColdCathodeSecondaryXCenter(),
+            sink_pc->GetColdCathodeSecondaryZCenter(),
+            sink_pc->GetColdCathodeSecondaryEnergyEV(),
+            sink_pc->GetColdCathodeSecondaryMacroWeight());
     }
 }
 
@@ -947,6 +998,12 @@ MultiParticleContainer::mapSpeciesProduct ()
             pc->m_qed_virtual_photon_species = i_vphot;
         }
 #endif
+
+        auto* phys_pc = dynamic_cast<PhysicalParticleContainer*>(pc.get());
+        if (phys_pc != nullptr && phys_pc->HasColdCathodeSecondaryEmission()) {
+            const int i_product = getSpeciesID(phys_pc->GetColdCathodeSecondaryProductName());
+            phys_pc->SetColdCathodeSecondaryProductSpeciesID(i_product);
+        }
 
     }
 
