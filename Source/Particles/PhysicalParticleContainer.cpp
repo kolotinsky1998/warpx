@@ -1036,12 +1036,16 @@ PhysicalParticleContainer::ApplyHotCathodeSource (int lev, amrex::Real dt)
         uyp[i] = speed;
     }
 
-    AddNParticles(lev, num_to_emit, xp, yp, zp, uxp, uyp, uzp, 1, attr_real, 0, attr_int);
+    AddNParticles(lev, num_to_emit, xp, yp, zp, uxp, uyp, uzp, 1, attr_real, 0, attr_int, 1);
 }
 
 void
 PhysicalParticleContainer::ApplyColdCathodeSink (int lev, long step)
 {
+#if !defined(WARPX_DIM_XZ)
+    amrex::ignore_unused(lev, step);
+    return;
+#else
     if (!m_has_cold_cathode_sink || lev != 0 || m_cold_cathode_nremove <= 0) { return; }
     if (step % m_cold_cathode_interval != 0) { return; }
 
@@ -1089,6 +1093,7 @@ PhysicalParticleContainer::ApplyColdCathodeSink (int lev, long step)
     }
 
     deleteInvalidParticles();
+#endif
 }
 
 amrex::Long
@@ -1142,7 +1147,7 @@ PhysicalParticleContainer::EmitColdCathodeSecondaries (
         uyp[i] = speed;
     }
 
-    AddNParticles(lev, num_to_emit, xp, yp, zp, uxp, uyp, uzp, 1, attr_real, 0, attr_int);
+    AddNParticles(lev, num_to_emit, xp, yp, zp, uxp, uyp, uzp, 1, attr_real, 0, attr_int, 1);
 }
 
 void
