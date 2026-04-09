@@ -2,6 +2,8 @@
 // Created by Vladimir Smirnov on 27.10.2021.
 //
 
+#include <cassert>
+
 #include "GyroKineticParticles.h"
 #include "GyroKineticPusher.h"
 

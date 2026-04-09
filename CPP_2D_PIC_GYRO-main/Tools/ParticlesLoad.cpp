@@ -1,4 +1,5 @@
 #include "ParticlesLoad.h"
+#include <cassert>
 #include <fstream>
 
 

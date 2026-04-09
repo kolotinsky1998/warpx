@@ -6,6 +6,7 @@ import time
 import numpy as np
 from scipy.constants import e, m_e
 
+import pywarpx
 from pywarpx import callbacks, particle_containers, picmi
 
 
@@ -39,6 +40,13 @@ dt = gyro_coeff / (10.0 * omega_ce)
 max_steps = 100000
 diagnostic_period = 500
 
+# Built-in WarpX real-space binomial/bilinear filter.
+# This is not identical to Smirnov's custom rho_filter_new, but it is the
+# closest built-in option in WarpX and should help suppress hot-cathode
+# charge-density spikes before the electrostatic solve.
+use_warpx_filter = 1
+filter_npass_each_dir = [2, 2]
+
 # Smirnov-like scaled plasma density and central seed region.
 scale = 0.02
 n_e_real = 1.0e15
@@ -64,6 +72,8 @@ log_file = "log.txt"
 
 total_hot_emitted = 0
 total_cold_secondary_emitted = 0
+total_electron_outer_absorbed = 0
+total_ion_outer_absorbed = 0
 
 
 #################################
@@ -101,12 +111,14 @@ embedded_boundary = picmi.EmbeddedBoundary(
 electrons = picmi.Species(
     particle_type="electron",
     name="electrons",
+    warpx_save_particles_at_eb=True,
 )
 
 ions = picmi.Species(
     name="ions",
     charge=e,
     mass=m_i,
+    warpx_save_particles_at_eb=True,
 )
 
 
@@ -150,6 +162,7 @@ sim = picmi.Simulation(
     time_step_size=dt,
     max_steps=max_steps,
     particle_shape="linear",
+    warpx_use_filter=use_warpx_filter,
     warpx_grid_type="staggered",
     warpx_particle_pusher_algo="boris",
     warpx_embedded_boundary=embedded_boundary,
@@ -197,6 +210,10 @@ sim.add_diagnostic(diag_particles)
 #################################
 sim.initialize_inputs()
 
+# PICMI exposes warpx_use_filter directly on Simulation, while the number of
+# filter passes is set on the WarpX runtime object before initialization.
+pywarpx.warpx.filter_npass_each_dir = filter_npass_each_dir
+
 electrons.species.particle_pusher = "gyrokinetic"
 ions.species.particle_pusher = "boris"
 
@@ -222,10 +239,37 @@ sim.initialize_warpx()
 
 electron_pc = particle_containers.ParticleContainerWrapper("electrons")
 ion_pc = particle_containers.ParticleContainerWrapper("ions")
+boundary_buffer = particle_containers.ParticleBoundaryBufferWrapper()
 
 
 def current_step():
     return sim.extension.warpx.getistep(lev=0)
+
+
+def count_particles_in_hot_cathode(pc):
+    x_tiles = pc.get_particle_x(level=0, copy_to_host=True)
+    z_tiles = pc.get_particle_z(level=0, copy_to_host=True)
+
+    count = 0
+    r2_max = Rinj * Rinj
+    for x_tile, z_tile in zip(x_tiles, z_tiles):
+        if len(x_tile) == 0:
+            continue
+        r2 = x_tile * x_tile + z_tile * z_tile
+        count += int(np.count_nonzero(r2 < r2_max))
+
+    return count
+
+
+def count_scraped_this_step(species_name, boundary):
+    arrays = boundary_buffer.get_particle_scraped_this_step(
+        species_name, boundary, "x", level=0
+    )
+    return sum(len(arr) for arr in arrays)
+
+
+def count_outer_absorbed_this_step(species_name):
+    return count_scraped_this_step(species_name, "eb")
 
 
 def uniform_disk_positions(n_particles, radius):
@@ -296,6 +340,15 @@ def update_hot_emission_counter():
     total_hot_emitted += N_hot_emit
 
 
+def update_loss_counters():
+    global total_electron_outer_absorbed, total_ion_outer_absorbed
+
+    electron_outer_absorbed_step = count_outer_absorbed_this_step("electrons")
+    ion_outer_absorbed_step = count_outer_absorbed_this_step("ions")
+    total_electron_outer_absorbed += electron_outer_absorbed_step
+    total_ion_outer_absorbed += ion_outer_absorbed_step
+
+
 def runtime_status():
     step = current_step()
     if step == 0 or step % diagnostic_period != 0:
@@ -303,33 +356,49 @@ def runtime_status():
 
     ne = electron_pc.get_particle_count(local=False)
     ni = ion_pc.get_particle_count(local=False)
+    ne_hot = count_particles_in_hot_cathode(electron_pc)
+    ni_hot = count_particles_in_hot_cathode(ion_pc)
     print(
         "[penning] "
         f"step={step} "
         f"Ne={ne} "
         f"Ni={ni} "
+        f"Ne_hot={ne_hot} "
+        f"Ni_hot={ni_hot} "
+        f"Ne_outer_abs={total_electron_outer_absorbed} "
+        f"Ni_outer_abs={total_ion_outer_absorbed} "
         f"Nhot_total={total_hot_emitted} "
         f"Ncoldsec_total={total_cold_secondary_emitted}"
     )
 
 
 with open(log_file, "w", encoding="utf-8") as f:
-    f.write("step ne ni nhot_total ncoldsec_total\n")
+    f.write(
+        "step ne ni ne_hot ni_hot "
+        "ne_outer_abs ni_outer_abs "
+        "nhot_total ncoldsec_total\n"
+    )
 
 
 def log_particle_counts():
     step = current_step()
     ne = electron_pc.get_particle_count(local=False)
     ni = ion_pc.get_particle_count(local=False)
+    ne_hot = count_particles_in_hot_cathode(electron_pc)
+    ni_hot = count_particles_in_hot_cathode(ion_pc)
 
     with open(log_file, "a", encoding="utf-8") as f:
-        f.write(f"{step} {ne} {ni} {total_hot_emitted} {total_cold_secondary_emitted}\n")
+        f.write(
+            f"{step} {ne} {ni} {ne_hot} {ni_hot} "
+            f"{total_electron_outer_absorbed} {total_ion_outer_absorbed} "
+            f"{total_hot_emitted} {total_cold_secondary_emitted}\n"
+        )
 
 
 inject_seed_plasma()
-
 callbacks.installafterstep(inject_cold_secondary_electrons)
 callbacks.installafterstep(update_hot_emission_counter)
+callbacks.installafterstep(update_loss_counters)
 callbacks.installafterstep(runtime_status)
 callbacks.installafterstep(log_particle_counts)
 
@@ -341,6 +410,8 @@ print(
     "[penning] "
     f"dt={dt:.6e} s, "
     f"omega_ce={omega_ce:.6e} 1/s, "
+    f"use_filter={use_warpx_filter}, "
+    f"filter_npass_each_dir={filter_npass_each_dir}, "
     f"macro_weight={macro_weight:.6e}, "
     f"seed_macro_count={seed_macro_count}, "
     f"seed_radius={seed_radius:.6e}, "

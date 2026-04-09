@@ -2,6 +2,8 @@
 // Created by Vladimir Smirnov on 11.09.2021.
 //
 
+#include <cassert>
+
 #include "Matrix.h"
 #include <fstream>
 
