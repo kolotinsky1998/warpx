@@ -1,0 +1,1648 @@
+simulation gyro start
+dt_e = 1.13713e-11
+dt_i = 5.68563e-11
+debye_radius = 0.000148743 at energy = 10EV
+Grid: (69; 69)
+ptcls_per_macro: 1.10634e+08
+num_of_macro_ptcls: 1346
+Ntot_ion_cathode: 23
+Ntot_electron_emission_cold: 2
+Ntot_electron_emission_hot: 38
+dt_Ag_Pb: 2.23595e-09
+Ag_Pb_step: 196
+inject_step_Ag_Pb: 19663
+start_inject_Ag_Pb: 1
+Ntot_injected_Ag_Pb: 10
+it_num: 2000000
+ion integration step: 5
+electron_emission_cold_step: 500
+electron_emission_hot_step: 500
+ion_leave_step: 500
+collision_step_ion: 25
+collision_step_electron: 5
+0
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 0 Ntot_ionized: 0
+iter: 0 Ntot_cold_cathode_leave: -23
+iter: 0 Ntot_anode_leave: 0
+iter: 0 Ntot_hot_cathode_emission: 38
+10000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 19663 Ntot_ionized: 8668
+iter: 19663 Ntot_cold_cathode_leave: -920
+iter: 19663 Ntot_anode_leave: 0
+iter: 19663 Ntot_hot_cathode_emission: 1520
+20000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+30000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 39326 Ntot_ionized: 18566
+iter: 39326 Ntot_cold_cathode_leave: -1817
+iter: 39326 Ntot_anode_leave: 0
+iter: 39326 Ntot_hot_cathode_emission: 3002
+40000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+50000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 58989 Ntot_ionized: 29510
+iter: 58989 Ntot_cold_cathode_leave: -2714
+iter: 58989 Ntot_anode_leave: -238
+iter: 58989 Ntot_hot_cathode_emission: 4484
+60000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+70000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 78652 Ntot_ionized: 40786
+iter: 78652 Ntot_cold_cathode_leave: -3634
+iter: 78652 Ntot_anode_leave: -4066
+iter: 78652 Ntot_hot_cathode_emission: 6004
+80000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+90000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 98315 Ntot_ionized: 52440
+iter: 98315 Ntot_cold_cathode_leave: -4531
+iter: 98315 Ntot_anode_leave: -8769
+iter: 98315 Ntot_hot_cathode_emission: 7486
+100000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+110000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 117978 Ntot_ionized: 63259
+iter: 117978 Ntot_cold_cathode_leave: -5428
+iter: 117978 Ntot_anode_leave: -13547
+iter: 117978 Ntot_hot_cathode_emission: 8968
+120000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+130000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 137641 Ntot_ionized: 74588
+iter: 137641 Ntot_cold_cathode_leave: -6348
+iter: 137641 Ntot_anode_leave: -18756
+iter: 137641 Ntot_hot_cathode_emission: 10488
+140000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+150000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 157304 Ntot_ionized: 85825
+iter: 157304 Ntot_cold_cathode_leave: -7245
+iter: 157304 Ntot_anode_leave: -24460
+iter: 157304 Ntot_hot_cathode_emission: 11970
+160000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+170000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 176967 Ntot_ionized: 96311
+iter: 176967 Ntot_cold_cathode_leave: -8142
+iter: 176967 Ntot_anode_leave: -29364
+iter: 176967 Ntot_hot_cathode_emission: 13452
+180000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+190000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 196630 Ntot_ionized: 106809
+iter: 196630 Ntot_cold_cathode_leave: -9062
+iter: 196630 Ntot_anode_leave: -34970
+iter: 196630 Ntot_hot_cathode_emission: 14972
+200000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+210000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 216293 Ntot_ionized: 117282
+iter: 216293 Ntot_cold_cathode_leave: -9959
+iter: 216293 Ntot_anode_leave: -40827
+iter: 216293 Ntot_hot_cathode_emission: 16454
+220000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+230000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 235956 Ntot_ionized: 127494
+iter: 235956 Ntot_cold_cathode_leave: -10856
+iter: 235956 Ntot_anode_leave: -46830
+iter: 235956 Ntot_hot_cathode_emission: 17936
+240000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+250000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 255619 Ntot_ionized: 138050
+iter: 255619 Ntot_cold_cathode_leave: -11776
+iter: 255619 Ntot_anode_leave: -52493
+iter: 255619 Ntot_hot_cathode_emission: 19456
+260000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+270000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 275282 Ntot_ionized: 147990
+iter: 275282 Ntot_cold_cathode_leave: -12673
+iter: 275282 Ntot_anode_leave: -59345
+iter: 275282 Ntot_hot_cathode_emission: 20938
+280000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+290000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 294945 Ntot_ionized: 158204
+iter: 294945 Ntot_cold_cathode_leave: -13570
+iter: 294945 Ntot_anode_leave: -66388
+iter: 294945 Ntot_hot_cathode_emission: 22420
+300000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+310000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 314608 Ntot_ionized: 167876
+iter: 314608 Ntot_cold_cathode_leave: -14490
+iter: 314608 Ntot_anode_leave: -75686
+iter: 314608 Ntot_hot_cathode_emission: 23940
+320000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+330000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 334271 Ntot_ionized: 179013
+iter: 334271 Ntot_cold_cathode_leave: -15387
+iter: 334271 Ntot_anode_leave: -83682
+iter: 334271 Ntot_hot_cathode_emission: 25422
+340000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+350000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 353934 Ntot_ionized: 188723
+iter: 353934 Ntot_cold_cathode_leave: -16284
+iter: 353934 Ntot_anode_leave: -93039
+iter: 353934 Ntot_hot_cathode_emission: 26904
+360000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+370000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 373597 Ntot_ionized: 198961
+iter: 373597 Ntot_cold_cathode_leave: -17204
+iter: 373597 Ntot_anode_leave: -103644
+iter: 373597 Ntot_hot_cathode_emission: 28424
+380000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+390000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 393260 Ntot_ionized: 209869
+iter: 393260 Ntot_cold_cathode_leave: -18101
+iter: 393260 Ntot_anode_leave: -111696
+iter: 393260 Ntot_hot_cathode_emission: 29906
+400000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+410000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 412923 Ntot_ionized: 218601
+iter: 412923 Ntot_cold_cathode_leave: -18998
+iter: 412923 Ntot_anode_leave: -121896
+iter: 412923 Ntot_hot_cathode_emission: 31388
+420000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+430000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 432586 Ntot_ionized: 229172
+iter: 432586 Ntot_cold_cathode_leave: -19918
+iter: 432586 Ntot_anode_leave: -131188
+iter: 432586 Ntot_hot_cathode_emission: 32908
+440000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+450000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 452249 Ntot_ionized: 239346
+iter: 452249 Ntot_cold_cathode_leave: -20815
+iter: 452249 Ntot_anode_leave: -139615
+iter: 452249 Ntot_hot_cathode_emission: 34390
+460000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+470000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 471912 Ntot_ionized: 248783
+iter: 471912 Ntot_cold_cathode_leave: -21712
+iter: 471912 Ntot_anode_leave: -150358
+iter: 471912 Ntot_hot_cathode_emission: 35872
+480000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+490000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 491575 Ntot_ionized: 259476
+iter: 491575 Ntot_cold_cathode_leave: -22632
+iter: 491575 Ntot_anode_leave: -159127
+iter: 491575 Ntot_hot_cathode_emission: 37392
+500000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+510000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 511238 Ntot_ionized: 269171
+iter: 511238 Ntot_cold_cathode_leave: -23529
+iter: 511238 Ntot_anode_leave: -169624
+iter: 511238 Ntot_hot_cathode_emission: 38874
+520000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+530000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 530901 Ntot_ionized: 279366
+iter: 530901 Ntot_cold_cathode_leave: -24426
+iter: 530901 Ntot_anode_leave: -181033
+iter: 530901 Ntot_hot_cathode_emission: 40356
+540000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+550000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 550564 Ntot_ionized: 289550
+iter: 550564 Ntot_cold_cathode_leave: -25346
+iter: 550564 Ntot_anode_leave: -189661
+iter: 550564 Ntot_hot_cathode_emission: 41876
+560000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+570000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 570227 Ntot_ionized: 298584
+iter: 570227 Ntot_cold_cathode_leave: -26243
+iter: 570227 Ntot_anode_leave: -200712
+iter: 570227 Ntot_hot_cathode_emission: 43358
+580000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 589890 Ntot_ionized: 309002
+iter: 589890 Ntot_cold_cathode_leave: -27140
+iter: 589890 Ntot_anode_leave: -210893
+iter: 589890 Ntot_hot_cathode_emission: 44840
+590000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+600000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 609553 Ntot_ionized: 318905
+iter: 609553 Ntot_cold_cathode_leave: -28060
+iter: 609553 Ntot_anode_leave: -218522
+iter: 609553 Ntot_hot_cathode_emission: 46360
+610000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+620000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 629216 Ntot_ionized: 327693
+iter: 629216 Ntot_cold_cathode_leave: -28957
+iter: 629216 Ntot_anode_leave: -229446
+iter: 629216 Ntot_hot_cathode_emission: 47842
+630000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+640000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 648879 Ntot_ionized: 338564
+iter: 648879 Ntot_cold_cathode_leave: -29854
+iter: 648879 Ntot_anode_leave: -238688
+iter: 648879 Ntot_hot_cathode_emission: 49324
+650000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+660000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 668542 Ntot_ionized: 348326
+iter: 668542 Ntot_cold_cathode_leave: -30774
+iter: 668542 Ntot_anode_leave: -247014
+iter: 668542 Ntot_hot_cathode_emission: 50844
+670000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+680000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 688205 Ntot_ionized: 357263
+iter: 688205 Ntot_cold_cathode_leave: -31671
+iter: 688205 Ntot_anode_leave: -260107
+iter: 688205 Ntot_hot_cathode_emission: 52326
+690000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+700000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 707868 Ntot_ionized: 368263
+iter: 707868 Ntot_cold_cathode_leave: -32568
+iter: 707868 Ntot_anode_leave: -269674
+iter: 707868 Ntot_hot_cathode_emission: 53808
+710000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+720000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 727531 Ntot_ionized: 377902
+iter: 727531 Ntot_cold_cathode_leave: -33488
+iter: 727531 Ntot_anode_leave: -279629
+iter: 727531 Ntot_hot_cathode_emission: 55328
+730000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+740000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 747194 Ntot_ionized: 386809
+iter: 747194 Ntot_cold_cathode_leave: -34385
+iter: 747194 Ntot_anode_leave: -291319
+iter: 747194 Ntot_hot_cathode_emission: 56810
+750000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+760000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 766857 Ntot_ionized: 396850
+iter: 766857 Ntot_cold_cathode_leave: -35282
+iter: 766857 Ntot_anode_leave: -301990
+iter: 766857 Ntot_hot_cathode_emission: 58292
+770000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+780000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 786520 Ntot_ionized: 406823
+iter: 786520 Ntot_cold_cathode_leave: -36202
+iter: 786520 Ntot_anode_leave: -312183
+iter: 786520 Ntot_hot_cathode_emission: 59812
+790000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+800000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 806183 Ntot_ionized: 415897
+iter: 806183 Ntot_cold_cathode_leave: -37099
+iter: 806183 Ntot_anode_leave: -323645
+iter: 806183 Ntot_hot_cathode_emission: 61294
+810000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+820000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 825846 Ntot_ionized: 426111
+iter: 825846 Ntot_cold_cathode_leave: -37996
+iter: 825846 Ntot_anode_leave: -335191
+iter: 825846 Ntot_hot_cathode_emission: 62776
+830000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+840000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 845509 Ntot_ionized: 435699
+iter: 845509 Ntot_cold_cathode_leave: -38916
+iter: 845509 Ntot_anode_leave: -344461
+iter: 845509 Ntot_hot_cathode_emission: 64296
+850000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+860000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 865172 Ntot_ionized: 444656
+iter: 865172 Ntot_cold_cathode_leave: -39813
+iter: 865172 Ntot_anode_leave: -357968
+iter: 865172 Ntot_hot_cathode_emission: 65778
+870000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+880000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 884835 Ntot_ionized: 454929
+iter: 884835 Ntot_cold_cathode_leave: -40710
+iter: 884835 Ntot_anode_leave: -368027
+iter: 884835 Ntot_hot_cathode_emission: 67260
+890000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+900000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 904498 Ntot_ionized: 464628
+iter: 904498 Ntot_cold_cathode_leave: -41607
+iter: 904498 Ntot_anode_leave: -376871
+iter: 904498 Ntot_hot_cathode_emission: 68742
+910000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+920000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 924161 Ntot_ionized: 473654
+iter: 924161 Ntot_cold_cathode_leave: -42527
+iter: 924161 Ntot_anode_leave: -388626
+iter: 924161 Ntot_hot_cathode_emission: 70262
+930000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+940000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 943824 Ntot_ionized: 484258
+iter: 943824 Ntot_cold_cathode_leave: -43424
+iter: 943824 Ntot_anode_leave: -398473
+iter: 943824 Ntot_hot_cathode_emission: 71744
+950000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+960000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 963487 Ntot_ionized: 493713
+iter: 963487 Ntot_cold_cathode_leave: -44321
+iter: 963487 Ntot_anode_leave: -406876
+iter: 963487 Ntot_hot_cathode_emission: 73226
+970000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+980000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 983150 Ntot_ionized: 502690
+iter: 983150 Ntot_cold_cathode_leave: -45241
+iter: 983150 Ntot_anode_leave: -419155
+iter: 983150 Ntot_hot_cathode_emission: 74746
+990000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1000000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1002813 Ntot_ionized: 513273
+iter: 1002813 Ntot_cold_cathode_leave: -46138
+iter: 1002813 Ntot_anode_leave: -429545
+iter: 1002813 Ntot_hot_cathode_emission: 76228
+1010000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1020000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1022476 Ntot_ionized: 522697
+iter: 1022476 Ntot_cold_cathode_leave: -47035
+iter: 1022476 Ntot_anode_leave: -438043
+iter: 1022476 Ntot_hot_cathode_emission: 77710
+1030000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1040000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1042139 Ntot_ionized: 531416
+iter: 1042139 Ntot_cold_cathode_leave: -47955
+iter: 1042139 Ntot_anode_leave: -451970
+iter: 1042139 Ntot_hot_cathode_emission: 79230
+1050000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1060000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1061802 Ntot_ionized: 541832
+iter: 1061802 Ntot_cold_cathode_leave: -48852
+iter: 1061802 Ntot_anode_leave: -463754
+iter: 1061802 Ntot_hot_cathode_emission: 80712
+1070000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1080000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1081465 Ntot_ionized: 551704
+iter: 1081465 Ntot_cold_cathode_leave: -49749
+iter: 1081465 Ntot_anode_leave: -473611
+iter: 1081465 Ntot_hot_cathode_emission: 82194
+1090000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1100000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1101128 Ntot_ionized: 560503
+iter: 1101128 Ntot_cold_cathode_leave: -50669
+iter: 1101128 Ntot_anode_leave: -486357
+iter: 1101128 Ntot_hot_cathode_emission: 83714
+1110000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1120000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1120791 Ntot_ionized: 570634
+iter: 1120791 Ntot_cold_cathode_leave: -51566
+iter: 1120791 Ntot_anode_leave: -498260
+iter: 1120791 Ntot_hot_cathode_emission: 85196
+1130000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1140000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1140454 Ntot_ionized: 581092
+iter: 1140454 Ntot_cold_cathode_leave: -52463
+iter: 1140454 Ntot_anode_leave: -506714
+iter: 1140454 Ntot_hot_cathode_emission: 86678
+1150000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1160000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1160117 Ntot_ionized: 589945
+iter: 1160117 Ntot_cold_cathode_leave: -53383
+iter: 1160117 Ntot_anode_leave: -518895
+iter: 1160117 Ntot_hot_cathode_emission: 88198
+1170000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1179780 Ntot_ionized: 600069
+iter: 1179780 Ntot_cold_cathode_leave: -54280
+iter: 1179780 Ntot_anode_leave: -531087
+iter: 1179780 Ntot_hot_cathode_emission: 89680
+1180000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1190000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1199443 Ntot_ionized: 609912
+iter: 1199443 Ntot_cold_cathode_leave: -55177
+iter: 1199443 Ntot_anode_leave: -540110
+iter: 1199443 Ntot_hot_cathode_emission: 91162
+1200000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1210000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1219106 Ntot_ionized: 619149
+iter: 1219106 Ntot_cold_cathode_leave: -56097
+iter: 1219106 Ntot_anode_leave: -552561
+iter: 1219106 Ntot_hot_cathode_emission: 92682
+1220000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1230000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1238769 Ntot_ionized: 628806
+iter: 1238769 Ntot_cold_cathode_leave: -56994
+iter: 1238769 Ntot_anode_leave: -564274
+iter: 1238769 Ntot_hot_cathode_emission: 94164
+1240000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1250000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1258432 Ntot_ionized: 638960
+iter: 1258432 Ntot_cold_cathode_leave: -57891
+iter: 1258432 Ntot_anode_leave: -572734
+iter: 1258432 Ntot_hot_cathode_emission: 95646
+1260000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1270000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1278095 Ntot_ionized: 648073
+iter: 1278095 Ntot_cold_cathode_leave: -58811
+iter: 1278095 Ntot_anode_leave: -583644
+iter: 1278095 Ntot_hot_cathode_emission: 97166
+1280000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1290000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1297758 Ntot_ionized: 657451
+iter: 1297758 Ntot_cold_cathode_leave: -59708
+iter: 1297758 Ntot_anode_leave: -594621
+iter: 1297758 Ntot_hot_cathode_emission: 98648
+1300000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1310000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1317421 Ntot_ionized: 667908
+iter: 1317421 Ntot_cold_cathode_leave: -60605
+iter: 1317421 Ntot_anode_leave: -603036
+iter: 1317421 Ntot_hot_cathode_emission: 100130
+1320000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+1330000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+
+iter: 1337084 Ntot_ionized: 677088
+iter: 1337084 Ntot_cold_cathode_leave: -61525
+iter: 1337084 Ntot_anode_leave: -614525
+iter: 1337084 Ntot_hot_cathode_emission: 101650
+1340000
+time_charge_interp: 0
+time_field_interp: 0
+time_pusher: 0
+time_col: 0
+time_anode: 0
+time_hot_cathode: 0
+time_cold_cathode: 0
+time_log: 0
+

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>t, \mu s
+count of macroparticles
+Все электроны
+Все ионы
+Электроны (горячий катод)
+Ионы (горячий катод)
+Электроны поглощенные на границе
+Ионы поглощенные на границе
+Ионы, поглощенные на холодном катоде
+Электроны эмитированные с горячего катода
+Вторичные электроны на холодном катоде
+
+ncharge
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>

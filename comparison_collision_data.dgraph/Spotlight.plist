@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>e-Ar elastic
+Energy, eV
+cross section, m^2
+modified
+WarpX
+Smirnov
+Thermal
+Seed
+Ionization
+Emission
+
+e-Ar ionization
+Energy, eV
+cross section, m^2
+modified
+WarpX
+Smirnov
+Thermal
+Seed
+Ionization
+Emission
+
+Ar-Ar^+
+Energy, eV
+cross section, m^2
+WarpX isotropic
+WarpX backscattered
+Smirnov total
+Thermal
+Seed
+Ionization
+Emission
+modified
+modified
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>
