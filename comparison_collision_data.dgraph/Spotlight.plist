@@ -35,8 +35,8 @@ Thermal
 Seed
 Ionization
 Emission
-modified
-modified
+modified isotropic
+modified backscattered
 </string>
 	<key>Text</key>
 	<string></string>

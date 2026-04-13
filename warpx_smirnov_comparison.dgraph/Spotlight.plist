@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>step
+superparticles
+absorbed electrons WarpX
+total electrons WarpX
+absorbed electrons Smirnov
+total electrons Smirnov
+
+micro seconds
+superparticles
+total electrons Smirnov
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>

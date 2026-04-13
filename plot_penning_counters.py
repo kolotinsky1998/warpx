@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import re
 from pathlib import Path
 
@@ -27,6 +28,11 @@ def parse_args() -> argparse.Namespace:
         "--output",
         default="penning_counters_vs_time.png",
         help="Output plot path. Default: %(default)s",
+    )
+    parser.add_argument(
+        "--csv-output",
+        default="penning_counters_vs_time.csv",
+        help="Output CSV path with parsed counters. Default: %(default)s",
     )
     parser.add_argument(
         "--show",
@@ -116,6 +122,23 @@ def style_plot() -> None:
     )
 
 
+def save_csv(path: Path, data: dict[str, np.ndarray]) -> None:
+    headers = [
+        "iteration",
+        "time_us",
+        "Ntot_ionized",
+        "Ntot_cold_cathode_leave",
+        "Ntot_anode_leave",
+        "Ntot_hot_cathode_emission",
+    ]
+
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        for row in zip(*(data[key] for key in headers)):
+            writer.writerow(row)
+
+
 def main() -> None:
     args = parse_args()
     input_path = Path(args.input)
@@ -136,9 +159,9 @@ def main() -> None:
     }
 
     labels = {
-        "Ntot_ionized": "Ionized pairs",
+        "Ntot_ionized": "Ionized electrons",
         "Ntot_cold_cathode_leave": "Ions absorbed on cold cathode",
-        "Ntot_anode_leave": "Particles absorbed on anode",
+        "Ntot_anode_leave": "Electrons absorbed on anode",
         "Ntot_hot_cathode_emission": "Electrons emitted from hot cathode",
     }
 
@@ -187,7 +210,10 @@ def main() -> None:
 
     output_path = Path(args.output)
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
+    csv_output_path = Path(args.csv_output)
+    save_csv(csv_output_path, data)
     print(f"Saved figure to {output_path.resolve()}")
+    print(f"Saved CSV to {csv_output_path.resolve()}")
 
     if args.show:
         plt.show()
