@@ -22,7 +22,13 @@ from .interpolation import linear_charge_deposition, linear_field_gather, rho_fi
 from .io import append_csv_row, ensure_output_dir, save_matrix_txt, write_json, write_metadata
 from .gyro import gyro_push
 from .particles import boris_push
-from .poisson import compute_electric_field, solve_poisson_cg, solve_poisson_weighted_jacobi
+from .poisson import (
+    build_direct_poisson_data,
+    compute_electric_field,
+    solve_poisson_cg,
+    solve_poisson_direct,
+    solve_poisson_weighted_jacobi,
+)
 from .sources_sinks import (
     cold_secondary_emission,
     hot_cathode_emission,
@@ -145,7 +151,7 @@ def _step_kernel_impl(state, tables, config: SimulationConfig):
     rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state), state.fields.rho_e)
     rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state), state.fields.rho_i)
     rho = rho_filter_new(rho_e + rho_i, state.geometry.nr_anode)
-    phi = solve_poisson_cg(state.fields.phi, rho, state.geometry, config.poisson_iterations, config.poisson_tol)
+    phi = solve_poisson_direct(rho, tables["poisson_direct"])
     ex_grid, ey_grid = compute_electric_field(phi, state.geometry)
     ex_e, ey_e = linear_field_gather(state.electrons, ex_grid, ey_grid, state.geometry)
     ex_i, ey_i = linear_field_gather(state.ions, ex_grid, ey_grid, state.geometry)
@@ -254,7 +260,7 @@ def step_once_profiled(state, tables, config: SimulationConfig):
     phi = _timed_stage(
         profile_row,
         "poisson_s",
-        lambda: solve_poisson_cg(state.fields.phi, rho, state.geometry, config.poisson_iterations, config.poisson_tol),
+        lambda: solve_poisson_direct(rho, tables["poisson_direct"]),
     )
     ex_grid, ey_grid = _timed_stage(profile_row, "field_from_phi_s", lambda: compute_electric_field(phi, state.geometry))
     ex_e, ey_e = _timed_stage(
@@ -420,6 +426,7 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
         "electron_elastic": load_cross_section(config.cross_sections.electron_elastic),
         "electron_ionization": load_cross_section(config.cross_sections.electron_ionization),
         "ion_elastic": load_cross_section(config.cross_sections.ion_elastic),
+        "poisson_direct": build_direct_poisson_data(state.geometry),
     }
 
     append_csv_row(out_dir / "counters.csv", counters_row(0, state.electrons, state.ions, state.geometry, state.counters))
