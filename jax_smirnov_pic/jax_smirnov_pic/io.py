@@ -28,3 +28,7 @@ def append_csv_row(path: Path, row: dict):
 
 def save_matrix_txt(path: Path, array):
     np.savetxt(path, np.asarray(array))
+
+
+def write_json(path: Path, data: dict):
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
