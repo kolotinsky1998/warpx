@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jax-smirnov-pic"
+version = "0.1.0"
+description = "JAX/CUDA implementation of Smirnov's SimulationCircleGyroNEW"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "jax",
+  "jaxlib",
+  "numpy",
+  "matplotlib",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
