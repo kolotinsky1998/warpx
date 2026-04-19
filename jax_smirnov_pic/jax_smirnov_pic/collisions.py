@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from .config import EV
-from .particles import first_free_slots, write_particles
+from .particles import all_free_slots, first_free_slots, write_particles
 from .state import ParticlePool
 
 K_B = 1.380649e-23
@@ -112,18 +112,16 @@ def apply_ionization(electrons: ParticlePool, ions: ParticlePool, ionization_mas
         vy=jnp.where(valid, electrons.vy * scale, electrons.vy),
         vz=jnp.where(valid, electrons.vz * scale, electrons.vz),
     )
-    spawn_count = int(valid.astype(jnp.int32).sum())
-    if spawn_count == 0:
-        return electrons, ions, 0
-    source_idx = jnp.where(valid, size=electrons.alive.shape[0], fill_value=-1)[0][:spawn_count]
+    source_idx = jnp.where(valid, size=electrons.alive.shape[0], fill_value=-1)[0]
     source_valid = source_idx >= 0
-    ex_idx, ex_valid = first_free_slots(electrons.alive, spawn_count)
-    ion_idx, ion_valid = first_free_slots(ions.alive, spawn_count)
+    ex_idx, ex_valid = all_free_slots(electrons.alive)
+    ion_idx, ion_valid = all_free_slots(ions.alive)
     src_safe = jnp.where(source_valid, source_idx, 0)
+    pair_valid = source_valid & ex_valid & ion_valid
     x_new = electrons.x[src_safe]
     y_new = electrons.y[src_safe]
-    zeros = jnp.zeros((spawn_count,), dtype=jnp.float32)
-    electrons = write_particles(electrons, ex_idx, ex_valid, x_new, y_new, zeros, zeros, zeros)
-    ions = write_particles(ions, ion_idx, ion_valid, x_new, y_new, zeros, zeros, zeros)
-    created = int(jnp.minimum(ex_valid.astype(jnp.int32).sum(), ion_valid.astype(jnp.int32).sum()))
+    zeros = jnp.zeros_like(x_new, dtype=jnp.float32)
+    electrons = write_particles(electrons, ex_idx, pair_valid, x_new, y_new, zeros, zeros, zeros)
+    ions = write_particles(ions, ion_idx, pair_valid, x_new, y_new, zeros, zeros, zeros)
+    created = pair_valid.astype(jnp.int32).sum()
     return electrons, ions, created

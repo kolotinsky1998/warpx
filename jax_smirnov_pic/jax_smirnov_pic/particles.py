@@ -48,6 +48,12 @@ def first_free_slots(alive: jax.Array, count: int):
     return chosen, valid
 
 
+def all_free_slots(alive: jax.Array):
+    indices = jnp.where(~alive, size=alive.shape[0], fill_value=-1)[0]
+    valid = indices >= 0
+    return indices, valid
+
+
 def write_particles(pool: ParticlePool, indices, valid, x, y, vx, vy, vz):
     safe_idx = jnp.where(valid, indices, 0)
     x_old, y_old = pool.x, pool.y

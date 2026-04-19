@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import math
 import time
 
 import jax
@@ -28,7 +29,6 @@ from .sources_sinks import (
     inject_initial_disk,
     remove_on_anode,
     remove_some_ions_on_cold_cathode,
-    update_counter,
 )
 from .state import create_initial_state
 
@@ -44,7 +44,10 @@ def _ion_charge(state):
 def initialize_particles(state, config: SimulationConfig):
     speed_std_e = jnp.sqrt(2.0 * config.init_energy_ev * EV / (3.0 * E_M))
     speed_std_i = jnp.sqrt(2.0 * config.init_energy_ev * EV / (3.0 * config.m_ion))
-    ntot_seed = max(1, int(jnp.pi * (state.geometry.radius_injection / state.geometry.dx) ** 2 * config.ptcls_per_cell))
+    ntot_seed = max(
+        1,
+        int(jnp.pi * (state.geometry.radius_injection / state.geometry.dx) ** 2 * config.ptcls_per_cell),
+    )
     key_e, key_i, new_key = jax.random.split(state.rng_key, 3)
     electrons = inject_initial_disk(state.electrons, key_e, state.geometry, ntot_seed, speed_std_e)
     ions = inject_initial_disk(state.ions, key_i, state.geometry, ntot_seed, speed_std_i)
@@ -82,12 +85,72 @@ def _timed_stage(profile_row: dict, name: str, fn):
     return result
 
 
-def step_once(state, tables, config: SimulationConfig):
+def _electron_collisions_kernel(electrons, ions, counters, rng_key, runtime, tables, config: SimulationConfig):
+    key1, key2, new_key = jax.random.split(rng_key, 3)
+    prob_el = electron_elastic_probability(
+        electrons,
+        tables["electron_elastic"],
+        runtime.n_gas_scaled,
+        config.collision_step_electron * runtime.dt,
+        E_M,
+    )
+    prob_ion = ionization_probability(
+        electrons,
+        tables["electron_ionization"],
+        runtime.n_gas_scaled,
+        config.collision_step_electron * runtime.dt,
+        E_M,
+    )
+    rand = jax.random.uniform(key1, prob_el.shape, dtype=jnp.float32)
+    elastic_mask = rand < prob_el
+    ionization_mask = (rand >= prob_el) & (rand < prob_el + prob_ion)
+    electrons = apply_electron_elastic(electrons, elastic_mask, key2, config.m_ion, E_M)
+    electrons, ions, created = apply_ionization(electrons, ions, ionization_mask, E_M)
+    counters = counters._replace(ntot_ionized=counters.ntot_ionized + created)
+    return electrons, ions, counters, new_key
+
+
+def _ion_collisions_kernel(ions, rng_key, runtime, tables, config: SimulationConfig):
+    key, new_key = jax.random.split(rng_key)
+    prob_i = ion_elastic_probability(
+        ions,
+        tables["ion_elastic"],
+        runtime.n_gas_scaled,
+        config.collision_step_ion * runtime.dt,
+        config.m_ion,
+    )
+    rand_i = jax.random.uniform(key, prob_i.shape, dtype=jnp.float32)
+    ions = apply_ion_elastic_or_cx(ions, rand_i < prob_i, key, config.m_ion, config.t_gas)
+    return ions, new_key
+
+
+def _cold_sink_kernel(ions, counters, rng_key, geometry, runtime):
+    ions, removed_i = remove_some_ions_on_cold_cathode(ions, rng_key, geometry, runtime)
+    counters = counters._replace(ntot_cold_cathode_leave=counters.ntot_cold_cathode_leave + removed_i)
+    return ions, counters
+
+
+def _hot_emission_kernel(electrons, counters, rng_key, geometry, runtime):
+    electrons, emitted_hot = hot_cathode_emission(electrons, rng_key, geometry, runtime, E_M)
+    counters = counters._replace(ntot_hot_cathode_emission=counters.ntot_hot_cathode_emission + emitted_hot)
+    return electrons, counters
+
+
+def _cold_secondary_kernel(electrons, rng_key, geometry, runtime):
+    electrons, _ = cold_secondary_emission(electrons, rng_key, geometry, runtime, E_M)
+    return electrons
+
+
+def _step_kernel_impl(state, tables, config: SimulationConfig):
     rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state))
     rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state))
     rho = rho_filter_new(rho_e + rho_i, state.geometry.nr_anode)
     phi = solve_poisson_weighted_jacobi(
-        state.fields.phi, rho, state.geometry, config.poisson_omega, config.poisson_iterations
+        state.fields.phi,
+        rho,
+        state.geometry,
+        config.poisson_omega,
+        config.poisson_iterations,
     )
     ex_grid, ey_grid = compute_electric_field(phi, state.geometry)
     ex_e, ey_e = linear_field_gather(state.electrons, ex_grid, ey_grid, state.geometry)
@@ -96,52 +159,62 @@ def step_once(state, tables, config: SimulationConfig):
     ions = state.ions._replace(ex=ex_i, ey=ey_i)
 
     electrons = gyro_push(electrons, state.runtime.dt, -EV, E_M)
-    if int(state.step) % state.runtime.ion_step == 0:
-        ions = boris_push(ions, state.runtime.dt * state.runtime.ion_step, EV, config.m_ion)
+    do_ion_push = jnp.equal(jnp.mod(state.step, state.runtime.ion_step), 0)
+    ions = jax.lax.cond(
+        do_ion_push,
+        lambda pool: boris_push(pool, state.runtime.dt * state.runtime.ion_step, EV, config.m_ion),
+        lambda pool: pool,
+        ions,
+    )
 
     counters = state.counters
-    if int(state.step) % config.collision_step_electron == 0:
-        key1, key2, key3, new_key = jax.random.split(state.rng_key, 4)
-        prob_el = electron_elastic_probability(
-            electrons, tables["electron_elastic"], state.runtime.n_gas_scaled, config.collision_step_electron * state.runtime.dt, E_M
-        )
-        prob_ion = ionization_probability(
-            electrons, tables["electron_ionization"], state.runtime.n_gas_scaled, config.collision_step_electron * state.runtime.dt, E_M
-        )
-        rand = jax.random.uniform(key1, prob_el.shape, dtype=jnp.float32)
-        elastic_mask = rand < prob_el
-        ionization_mask = (rand >= prob_el) & (rand < prob_el + prob_ion)
-        electrons = apply_electron_elastic(electrons, elastic_mask, key2, config.m_ion, E_M)
-        electrons, ions, created = apply_ionization(electrons, ions, ionization_mask, E_M)
-        counters = counters._replace(ntot_ionized=counters.ntot_ionized + created)
-        rng_key = new_key
-    else:
-        rng_key = state.rng_key
+    rng_key = state.rng_key
 
-    if int(state.step) % config.collision_step_ion == 0:
-        key4, rng_key = jax.random.split(rng_key)
-        prob_i = ion_elastic_probability(
-            ions, tables["ion_elastic"], state.runtime.n_gas_scaled, config.collision_step_ion * state.runtime.dt, config.m_ion
-        )
-        rand_i = jax.random.uniform(key4, prob_i.shape, dtype=jnp.float32)
-        ions = apply_ion_elastic_or_cx(ions, rand_i < prob_i, key4, config.m_ion, config.t_gas)
+    do_electron_collisions = jnp.equal(jnp.mod(state.step, config.collision_step_electron), 0)
+    electrons, ions, counters, rng_key = jax.lax.cond(
+        do_electron_collisions,
+        lambda args: _electron_collisions_kernel(args[0], args[1], args[2], args[3], state.runtime, tables, config),
+        lambda args: args,
+        (electrons, ions, counters, rng_key),
+    )
+
+    do_ion_collisions = jnp.equal(jnp.mod(state.step, config.collision_step_ion), 0)
+    ions, rng_key = jax.lax.cond(
+        do_ion_collisions,
+        lambda args: _ion_collisions_kernel(args[0], args[1], state.runtime, tables, config),
+        lambda args: args,
+        (ions, rng_key),
+    )
 
     electrons, removed_e = remove_on_anode(electrons, state.geometry)
     counters = counters._replace(ntot_anode_leave=counters.ntot_anode_leave + removed_e)
 
-    if int(state.step) % config.ion_leave_step == 0:
-        key5, rng_key = jax.random.split(rng_key)
-        ions, removed_i = remove_some_ions_on_cold_cathode(ions, key5, state.geometry, state.runtime)
-        counters = counters._replace(ntot_cold_cathode_leave=counters.ntot_cold_cathode_leave + removed_i)
+    do_cold_sink = jnp.equal(jnp.mod(state.step, config.ion_leave_step), 0)
+    rng_key, sink_key = jax.random.split(rng_key)
+    ions, counters = jax.lax.cond(
+        do_cold_sink,
+        lambda args: _cold_sink_kernel(*args),
+        lambda args: args[:2],
+        (ions, counters, sink_key, state.geometry, state.runtime),
+    )
 
-    if int(state.step) % config.electron_emission_hot_step == 0:
-        key6, rng_key = jax.random.split(rng_key)
-        electrons, emitted_hot = hot_cathode_emission(electrons, key6, state.geometry, state.runtime, E_M)
-        counters = counters._replace(ntot_hot_cathode_emission=counters.ntot_hot_cathode_emission + emitted_hot)
+    do_hot_emit = jnp.equal(jnp.mod(state.step, config.electron_emission_hot_step), 0)
+    rng_key, hot_key = jax.random.split(rng_key)
+    electrons, counters = jax.lax.cond(
+        do_hot_emit,
+        lambda args: _hot_emission_kernel(*args),
+        lambda args: args[:2],
+        (electrons, counters, hot_key, state.geometry, state.runtime),
+    )
 
-    if int(state.step) % config.electron_emission_cold_step == 0:
-        key7, rng_key = jax.random.split(rng_key)
-        electrons, _ = cold_secondary_emission(electrons, key7, state.geometry, state.runtime, E_M)
+    do_cold_emit = jnp.equal(jnp.mod(state.step, config.electron_emission_cold_step), 0)
+    rng_key, cold_key = jax.random.split(rng_key)
+    electrons = jax.lax.cond(
+        do_cold_emit,
+        lambda args: _cold_secondary_kernel(*args),
+        lambda args: args[0],
+        (electrons, cold_key, state.geometry, state.runtime),
+    )
 
     return state._replace(
         electrons=electrons,
@@ -151,6 +224,23 @@ def step_once(state, tables, config: SimulationConfig):
         step=state.step + 1,
         rng_key=rng_key,
     )
+
+
+step_once_jitted = jax.jit(_step_kernel_impl, static_argnames=("config",))
+
+
+def _run_steps_block(state, tables, config: SimulationConfig, num_steps: int):
+    def body(_, carry):
+        return step_once_jitted(carry, tables, config)
+
+    return jax.lax.fori_loop(0, num_steps, body, state)
+
+
+run_steps_block_jitted = jax.jit(_run_steps_block, static_argnames=("config", "num_steps"))
+
+
+def step_once(state, tables, config: SimulationConfig):
+    return step_once_jitted(state, tables, config)
 
 
 def step_once_profiled(state, tables, config: SimulationConfig):
@@ -166,11 +256,7 @@ def step_once_profiled(state, tables, config: SimulationConfig):
         "deposit_ions_s",
         lambda: linear_charge_deposition(state.ions, state.geometry, _ion_charge(state)),
     )
-    rho = _timed_stage(
-        profile_row,
-        "rho_filter_s",
-        lambda: rho_filter_new(rho_e + rho_i, state.geometry.nr_anode),
-    )
+    rho = _timed_stage(profile_row, "rho_filter_s", lambda: rho_filter_new(rho_e + rho_i, state.geometry.nr_anode))
     phi = _timed_stage(
         profile_row,
         "poisson_s",
@@ -178,11 +264,7 @@ def step_once_profiled(state, tables, config: SimulationConfig):
             state.fields.phi, rho, state.geometry, config.poisson_omega, config.poisson_iterations
         ),
     )
-    ex_grid, ey_grid = _timed_stage(
-        profile_row,
-        "field_from_phi_s",
-        lambda: compute_electric_field(phi, state.geometry),
-    )
+    ex_grid, ey_grid = _timed_stage(profile_row, "field_from_phi_s", lambda: compute_electric_field(phi, state.geometry))
     ex_e, ey_e = _timed_stage(
         profile_row,
         "gather_electrons_s",
@@ -196,11 +278,7 @@ def step_once_profiled(state, tables, config: SimulationConfig):
     electrons = state.electrons._replace(ex=ex_e, ey=ey_e)
     ions = state.ions._replace(ex=ex_i, ey=ey_i)
 
-    electrons = _timed_stage(
-        profile_row,
-        "push_electrons_s",
-        lambda: gyro_push(electrons, state.runtime.dt, -EV, E_M),
-    )
+    electrons = _timed_stage(profile_row, "push_electrons_s", lambda: gyro_push(electrons, state.runtime.dt, -EV, E_M))
     if int(state.step) % state.runtime.ion_step == 0:
         ions = _timed_stage(
             profile_row,
@@ -213,35 +291,22 @@ def step_once_profiled(state, tables, config: SimulationConfig):
     counters = state.counters
     rng_key = state.rng_key
     if int(state.step) % config.collision_step_electron == 0:
-        key1, key2, key3, new_key = jax.random.split(rng_key, 4)
-
+        key1, key2, new_key = jax.random.split(rng_key, 3)
         prob_el = _timed_stage(
             profile_row,
             "electron_collision_probability_s",
             lambda: electron_elastic_probability(
-                electrons,
-                tables["electron_elastic"],
-                state.runtime.n_gas_scaled,
-                config.collision_step_electron * state.runtime.dt,
-                E_M,
+                electrons, tables["electron_elastic"], state.runtime.n_gas_scaled, config.collision_step_electron * state.runtime.dt, E_M
             ),
         )
         prob_ion = _timed_stage(
             profile_row,
             "ionization_probability_s",
             lambda: ionization_probability(
-                electrons,
-                tables["electron_ionization"],
-                state.runtime.n_gas_scaled,
-                config.collision_step_electron * state.runtime.dt,
-                E_M,
+                electrons, tables["electron_ionization"], state.runtime.n_gas_scaled, config.collision_step_electron * state.runtime.dt, E_M
             ),
         )
-        rand = _timed_stage(
-            profile_row,
-            "electron_collision_rng_s",
-            lambda: jax.random.uniform(key1, prob_el.shape, dtype=jnp.float32),
-        )
+        rand = _timed_stage(profile_row, "electron_collision_rng_s", lambda: jax.random.uniform(key1, prob_el.shape, dtype=jnp.float32))
         elastic_mask = rand < prob_el
         ionization_mask = (rand >= prob_el) & (rand < prob_el + prob_ion)
         electrons = _timed_stage(
@@ -269,18 +334,10 @@ def step_once_profiled(state, tables, config: SimulationConfig):
             profile_row,
             "ion_collision_probability_s",
             lambda: ion_elastic_probability(
-                ions,
-                tables["ion_elastic"],
-                state.runtime.n_gas_scaled,
-                config.collision_step_ion * state.runtime.dt,
-                config.m_ion,
+                ions, tables["ion_elastic"], state.runtime.n_gas_scaled, config.collision_step_ion * state.runtime.dt, config.m_ion
             ),
         )
-        rand_i = _timed_stage(
-            profile_row,
-            "ion_collision_rng_s",
-            lambda: jax.random.uniform(key4, prob_i.shape, dtype=jnp.float32),
-        )
+        rand_i = _timed_stage(profile_row, "ion_collision_rng_s", lambda: jax.random.uniform(key4, prob_i.shape, dtype=jnp.float32))
         ions = _timed_stage(
             profile_row,
             "ion_collision_apply_s",
@@ -291,11 +348,7 @@ def step_once_profiled(state, tables, config: SimulationConfig):
         profile_row["ion_collision_rng_s"] = 0.0
         profile_row["ion_collision_apply_s"] = 0.0
 
-    electrons, removed_e = _timed_stage(
-        profile_row,
-        "anode_loss_s",
-        lambda: remove_on_anode(electrons, state.geometry),
-    )
+    electrons, removed_e = _timed_stage(profile_row, "anode_loss_s", lambda: remove_on_anode(electrons, state.geometry))
     counters = counters._replace(ntot_anode_leave=counters.ntot_anode_leave + removed_e)
 
     if int(state.step) % config.ion_leave_step == 0:
@@ -347,13 +400,28 @@ def step_once_profiled(state, tables, config: SimulationConfig):
     return state, profile_row
 
 
+def _compute_block_size(config: SimulationConfig) -> int:
+    intervals = [config.log_interval, config.field_dump_interval]
+    intervals = [int(v) for v in intervals if int(v) > 0]
+    if not intervals:
+        return max(1, config.it_num)
+    block = intervals[0]
+    for interval in intervals[1:]:
+        block = math.gcd(block, interval)
+    return max(1, block)
+
+
 def run_simulation(config: SimulationConfig | None = None, profile: bool = False, profile_summary_only: bool = False):
     config = config or smirnov_default_config()
     out_dir = ensure_output_dir(config.output_dir)
-    write_metadata(out_dir / "metadata.json", {
-        "config": asdict(config),
-        "profiling_enabled": profile,
-    })
+    write_metadata(
+        out_dir / "metadata.json",
+        {
+            "config": asdict(config),
+            "profiling_enabled": profile,
+            "execution_mode": "profiled_python_loop" if profile else "jit_block_loop",
+        },
+    )
     state = create_initial_state(config)
     state = initialize_particles(state, config)
     tables = {
@@ -361,32 +429,33 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
         "electron_ionization": load_cross_section(config.cross_sections.electron_ionization),
         "ion_elastic": load_cross_section(config.cross_sections.ion_elastic),
     }
-    profile_rows = []
 
-    for it in range(config.it_num):
-        io_t0 = time.perf_counter()
-        if profile:
+    append_csv_row(out_dir / "counters.csv", counters_row(0, state.electrons, state.ions, state.geometry, state.counters))
+    save_matrix_txt(out_dir / "rho_e_0.txt", state.fields.rho_e)
+    save_matrix_txt(out_dir / "rho_i_0.txt", state.fields.rho_i)
+    save_matrix_txt(out_dir / "phi_0.txt", state.fields.phi)
+
+    if profile:
+        profile_rows = []
+        for it in range(config.it_num):
+            io_t0 = time.perf_counter()
             state, profile_row = step_once_profiled(state, tables, config)
-        else:
-            state = step_once(state, tables, config)
-            profile_row = None
-        io_before = time.perf_counter()
-        if it % config.log_interval == 0:
-            append_csv_row(out_dir / "counters.csv", counters_row(it, state.electrons, state.ions, state.geometry, state.counters))
-        if it % config.field_dump_interval == 0:
-            save_matrix_txt(out_dir / f"rho_e_{it}.txt", state.fields.rho_e)
-            save_matrix_txt(out_dir / f"rho_i_{it}.txt", state.fields.rho_i)
-            save_matrix_txt(out_dir / f"phi_{it}.txt", state.fields.phi)
-        io_after = time.perf_counter()
-        if profile and profile_row is not None:
+            io_before = time.perf_counter()
+            if (it + 1) % config.log_interval == 0:
+                append_csv_row(
+                    out_dir / "counters.csv",
+                    counters_row(int(state.step), state.electrons, state.ions, state.geometry, state.counters),
+                )
+            if (it + 1) % config.field_dump_interval == 0:
+                save_matrix_txt(out_dir / f"rho_e_{int(state.step)}.txt", state.fields.rho_e)
+                save_matrix_txt(out_dir / f"rho_i_{int(state.step)}.txt", state.fields.rho_i)
+                save_matrix_txt(out_dir / f"phi_{int(state.step)}.txt", state.fields.phi)
+            io_after = time.perf_counter()
             profile_row["io_s"] = io_after - io_before
             profile_row["wall_total_with_io_s"] = io_after - io_t0
             if not profile_summary_only:
                 profile_rows.append(profile_row)
 
-    if profile:
-        if profile_summary_only:
-            profile_rows = []
         profile_path = out_dir / "profiling.csv"
         summary_path = out_dir / "profiling_summary.json"
         if profile_rows:
@@ -405,5 +474,23 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
             write_json(summary_path, summary)
         else:
             write_json(summary_path, {"note": "Profiling enabled, but per-step rows were not stored."})
+        return state
+
+    block_size = _compute_block_size(config)
+    steps_done = 0
+    while steps_done < config.it_num:
+        num_steps = min(block_size, config.it_num - steps_done)
+        state = run_steps_block_jitted(state, tables, config, num_steps)
+        _block_particles(state.electrons)
+        _block_particles(state.ions)
+        _block_fields(state.fields)
+        steps_done += num_steps
+        current_step = int(state.step)
+        if current_step % config.log_interval == 0:
+            append_csv_row(out_dir / "counters.csv", counters_row(current_step, state.electrons, state.ions, state.geometry, state.counters))
+        if current_step % config.field_dump_interval == 0:
+            save_matrix_txt(out_dir / f"rho_e_{current_step}.txt", state.fields.rho_e)
+            save_matrix_txt(out_dir / f"rho_i_{current_step}.txt", state.fields.rho_i)
+            save_matrix_txt(out_dir / f"phi_{current_step}.txt", state.fields.phi)
 
     return state
