@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 import math
+from typing import NamedTuple
 
 import jax
 import jax.numpy as jnp
@@ -17,8 +17,7 @@ C = 299792458.0
 E_M = 9.10938356e-31
 
 
-@dataclass(frozen=True)
-class CrossSectionTable:
+class CrossSectionTable(NamedTuple):
     energy_ev: jax.Array
     sigma_m2: jax.Array
 
