@@ -76,14 +76,14 @@ class SimulationConfig:
 
 
 def smirnov_default_config(output_dir: str | None = None) -> SimulationConfig:
-    base = Path("/Users/daniilkolotinsky/Desktop/separation/warpx/CPP_2D_PIC_GYRO-main")
+    base = Path("/content/warpx/CPP_2D_PIC_GYRO-main")
     output_dir = output_dir or str(
-        Path("/Users/daniilkolotinsky/Desktop/separation/warpx/jax_smirnov_pic/outputs/simulation_circle_gyro_new")
+        Path("/content/warpx/jax_smirnov_pic/outputs/simulation_circle_gyro_new")
     )
     return SimulationConfig(
         scale=0.02,
         gyro_coeff=100,
-        it_num=int(1e4),
+        it_num=int(400),
         ptcls_per_cell=1.0,
         r=0.26,
         b=0.1,

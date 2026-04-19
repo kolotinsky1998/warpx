@@ -9,6 +9,26 @@ from .state import GeometryState
 EPSILON_0 = 8.854187817620389e-12
 
 
+def _mask_inside(arr, inside_mask):
+    return jnp.where(inside_mask, arr, 0.0)
+
+
+def _poisson_operator(phi, inside_mask, dx, dy):
+    phi = _mask_inside(phi, inside_mask)
+    dx2 = dx * dx
+    dy2 = dy * dy
+    center = (2.0 / dx2 + 2.0 / dy2) * phi
+    neighbors = (
+        (jnp.roll(phi, 1, axis=0) + jnp.roll(phi, -1, axis=0)) / dx2
+        + (jnp.roll(phi, 1, axis=1) + jnp.roll(phi, -1, axis=1)) / dy2
+    )
+    return _mask_inside(center - neighbors, inside_mask)
+
+
+def _masked_dot(a, b, inside_mask):
+    return jnp.sum(jnp.where(inside_mask, a * b, 0.0))
+
+
 def weighted_jacobi_step(phi, rho, inside_mask, dx, dy, omega):
     dx2 = dx * dx
     dy2 = dy * dy
@@ -28,6 +48,44 @@ def solve_poisson_weighted_jacobi(phi0, rho, geometry: GeometryState, omega: flo
         return weighted_jacobi_step(phi, rho, inside_mask, geometry.dx, geometry.dy, omega)
 
     return jax.lax.fori_loop(0, n_iter, body, phi0)
+
+
+def solve_poisson_cg(phi0, rho, geometry: GeometryState, n_iter: int, tol: float):
+    inside_mask = circular_domain_mask(geometry)
+    phi = _mask_inside(phi0, inside_mask)
+    b = _mask_inside(rho / EPSILON_0, inside_mask)
+    diag = jnp.where(
+        inside_mask,
+        2.0 / (geometry.dx * geometry.dx) + 2.0 / (geometry.dy * geometry.dy),
+        1.0,
+    )
+
+    r0 = b - _poisson_operator(phi, inside_mask, geometry.dx, geometry.dy)
+    z0 = _mask_inside(r0 / diag, inside_mask)
+    p0 = z0
+    rz0 = _masked_dot(r0, z0, inside_mask)
+    b_norm = jnp.sqrt(_masked_dot(b, b, inside_mask) + 1.0e-30)
+
+    def cond_fn(carry):
+        _, r, _, _, k = carry
+        residual = jnp.sqrt(_masked_dot(r, r, inside_mask)) / b_norm
+        return (k < n_iter) & (residual > tol)
+
+    def body_fn(carry):
+        phi_k, r_k, p_k, rz_k, k = carry
+        ap_k = _poisson_operator(p_k, inside_mask, geometry.dx, geometry.dy)
+        denom = _masked_dot(p_k, ap_k, inside_mask)
+        alpha = jnp.where(jnp.abs(denom) > 1.0e-30, rz_k / denom, 0.0)
+        phi_next = _mask_inside(phi_k + alpha * p_k, inside_mask)
+        r_next = _mask_inside(r_k - alpha * ap_k, inside_mask)
+        z_next = _mask_inside(r_next / diag, inside_mask)
+        rz_next = _masked_dot(r_next, z_next, inside_mask)
+        beta = jnp.where(jnp.abs(rz_k) > 1.0e-30, rz_next / rz_k, 0.0)
+        p_next = _mask_inside(z_next + beta * p_k, inside_mask)
+        return phi_next, r_next, p_next, rz_next, k + 1
+
+    phi, _, _, _, _ = jax.lax.while_loop(cond_fn, body_fn, (phi, r0, p0, rz0, jnp.array(0, dtype=jnp.int32)))
+    return _mask_inside(phi, inside_mask)
 
 
 def compute_electric_field(phi, geometry: GeometryState):
