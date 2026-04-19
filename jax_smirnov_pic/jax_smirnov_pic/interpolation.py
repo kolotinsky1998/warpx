@@ -6,19 +6,20 @@ import jax.numpy as jnp
 from .state import GeometryState, ParticlePool
 
 
-def _particle_cells(pool: ParticlePool, geometry: GeometryState):
+def _particle_cells(pool: ParticlePool, geometry: GeometryState, nx: int, ny: int):
     cell_x = jnp.floor(pool.x / geometry.dx).astype(jnp.int32)
     cell_y = jnp.floor(pool.y / geometry.dy).astype(jnp.int32)
-    cell_x = jnp.clip(cell_x, 0, geometry.nx - 2)
-    cell_y = jnp.clip(cell_y, 0, geometry.ny - 2)
+    cell_x = jnp.clip(cell_x, 0, nx - 2)
+    cell_y = jnp.clip(cell_y, 0, ny - 2)
     hx = (pool.x - cell_x * geometry.dx) / geometry.dx
     hy = (pool.y - cell_y * geometry.dy) / geometry.dy
     return cell_x, cell_y, hx, hy
 
 
-def linear_charge_deposition(pool: ParticlePool, geometry: GeometryState, particle_charge: float):
-    rho = jnp.zeros((geometry.nx, geometry.ny), dtype=jnp.float32)
-    cell_x, cell_y, hx, hy = _particle_cells(pool, geometry)
+def linear_charge_deposition(pool: ParticlePool, geometry: GeometryState, particle_charge: float, rho_template: jax.Array):
+    rho = jnp.zeros_like(rho_template, dtype=jnp.float32)
+    nx, ny = rho.shape
+    cell_x, cell_y, hx, hy = _particle_cells(pool, geometry, nx, ny)
     alive = pool.alive.astype(jnp.float32)
     scale = particle_charge / (geometry.dx * geometry.dy)
     w00 = alive * (1.0 - hx) * (1.0 - hy) * scale
@@ -33,7 +34,8 @@ def linear_charge_deposition(pool: ParticlePool, geometry: GeometryState, partic
 
 
 def linear_field_gather(pool: ParticlePool, ex_grid, ey_grid, geometry: GeometryState):
-    cell_x, cell_y, hx, hy = _particle_cells(pool, geometry)
+    nx, ny = ex_grid.shape
+    cell_x, cell_y, hx, hy = _particle_cells(pool, geometry, nx, ny)
     ex = ex_grid[cell_x, cell_y] * (1.0 - hx) * (1.0 - hy)
     ex = ex + ex_grid[cell_x + 1, cell_y] * hx * (1.0 - hy)
     ex = ex + ex_grid[cell_x + 1, cell_y + 1] * hx * hy

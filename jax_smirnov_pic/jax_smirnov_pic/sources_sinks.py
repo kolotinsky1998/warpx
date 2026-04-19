@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 
 from .geometry import inside_anode, inside_cold_cathode_ring
-from .particles import deactivate, first_free_slots, write_particles
+from .particles import all_free_slots, deactivate, first_free_slots, write_particles
 from .state import CounterState, GeometryState, ParticlePool, RuntimeState
 
 
@@ -29,29 +29,33 @@ def inject_initial_disk(pool: ParticlePool, key, geometry: GeometryState, count:
 
 
 def hot_cathode_emission(pool: ParticlePool, key, geometry: GeometryState, runtime: RuntimeState, particle_mass: float):
-    count = runtime.hot_emit_count
-    x, y = _sample_ring(key, geometry.x_center, geometry.y_center, 0.0, geometry.ion_radius_leave_min, count)
-    vz = jnp.full((count,), jnp.sqrt(2.0 * 100.0 * 1.6021766208e-19 / particle_mass), dtype=jnp.float32)
-    zeros = jnp.zeros((count,), dtype=jnp.float32)
-    indices, valid = first_free_slots(pool.alive, count)
+    size = pool.x.shape[0]
+    count_mask = jnp.arange(size) < runtime.hot_emit_count
+    x, y = _sample_ring(key, geometry.x_center, geometry.y_center, 0.0, geometry.ion_radius_leave_min, size)
+    vz = jnp.full((size,), jnp.sqrt(2.0 * 100.0 * 1.6021766208e-19 / particle_mass), dtype=jnp.float32)
+    zeros = jnp.zeros((size,), dtype=jnp.float32)
+    indices, free_valid = all_free_slots(pool.alive)
+    valid = count_mask & free_valid
     pool = write_particles(pool, indices, valid, x, y, zeros, zeros, vz)
     emitted = valid.astype(jnp.int32).sum()
     return pool, emitted
 
 
 def cold_secondary_emission(pool: ParticlePool, key, geometry: GeometryState, runtime: RuntimeState, particle_mass: float):
-    count = runtime.cold_emit_count
+    size = pool.x.shape[0]
+    count_mask = jnp.arange(size) < runtime.cold_emit_count
     x, y = _sample_ring(
         key,
         geometry.x_center,
         geometry.y_center,
         geometry.ion_radius_leave_min,
         geometry.ion_radius_leave_max,
-        count,
+        size,
     )
-    vz = jnp.full((count,), jnp.sqrt(2.0 * 100.0 * 1.6021766208e-19 / particle_mass), dtype=jnp.float32)
-    zeros = jnp.zeros((count,), dtype=jnp.float32)
-    indices, valid = first_free_slots(pool.alive, count)
+    vz = jnp.full((size,), jnp.sqrt(2.0 * 100.0 * 1.6021766208e-19 / particle_mass), dtype=jnp.float32)
+    zeros = jnp.zeros((size,), dtype=jnp.float32)
+    indices, free_valid = all_free_slots(pool.alive)
+    valid = count_mask & free_valid
     pool = write_particles(pool, indices, valid, x, y, zeros, zeros, vz)
     return pool, valid.astype(jnp.int32).sum()
 
@@ -66,8 +70,8 @@ def remove_some_ions_on_cold_cathode(pool: ParticlePool, key, geometry: Geometry
     candidates = pool.alive & inside_cold_cathode_ring(pool.x, pool.y, geometry)
     candidate_idx = jnp.where(candidates, size=pool.alive.shape[0], fill_value=-1)[0]
     perm = jax.random.permutation(key, candidate_idx.shape[0])
-    picked = candidate_idx[perm][: runtime.ion_leave_count]
-    valid = picked >= 0
+    picked = candidate_idx[perm]
+    valid = (jnp.arange(pool.alive.shape[0]) < runtime.ion_leave_count) & (picked >= 0)
     safe = jnp.where(valid, picked, 0)
     kill_mask = jnp.zeros_like(pool.alive)
     kill_mask = kill_mask.at[safe].set(valid)

@@ -142,8 +142,8 @@ def _cold_secondary_kernel(electrons, rng_key, geometry, runtime):
 
 
 def _step_kernel_impl(state, tables, config: SimulationConfig):
-    rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state))
-    rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state))
+    rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state), state.fields.rho_e)
+    rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state), state.fields.rho_i)
     rho = rho_filter_new(rho_e + rho_i, state.geometry.nr_anode)
     phi = solve_poisson_weighted_jacobi(
         state.fields.phi,
@@ -249,12 +249,12 @@ def step_once_profiled(state, tables, config: SimulationConfig):
     rho_e = _timed_stage(
         profile_row,
         "deposit_electrons_s",
-        lambda: linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state)),
+        lambda: linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state), state.fields.rho_e),
     )
     rho_i = _timed_stage(
         profile_row,
         "deposit_ions_s",
-        lambda: linear_charge_deposition(state.ions, state.geometry, _ion_charge(state)),
+        lambda: linear_charge_deposition(state.ions, state.geometry, _ion_charge(state), state.fields.rho_i),
     )
     rho = _timed_stage(profile_row, "rho_filter_s", lambda: rho_filter_new(rho_e + rho_i, state.geometry.nr_anode))
     phi = _timed_stage(

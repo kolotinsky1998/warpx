@@ -12,9 +12,7 @@ def grid_coordinates(geometry: GeometryState):
 
 
 def circular_domain_mask(geometry: GeometryState) -> jax.Array:
-    xx, yy = grid_coordinates(geometry)
-    r2 = (xx - geometry.x_center) ** 2 + (yy - geometry.y_center) ** 2
-    return r2 < geometry.radius_anode**2
+    return geometry.inside_mask
 
 
 def radius_squared(x, y, geometry: GeometryState):

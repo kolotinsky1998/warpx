@@ -53,6 +53,7 @@ class GeometryState(NamedTuple):
     radius_injection: float
     ion_radius_leave_min: float
     ion_radius_leave_max: float
+    inside_mask: jax.Array
 
 
 class RuntimeState(NamedTuple):
@@ -145,6 +146,9 @@ def build_runtime(config: SimulationConfig) -> tuple[GeometryState, RuntimeState
         radius_injection=radius_injection,
         ion_radius_leave_min=ion_radius_leave_min,
         ion_radius_leave_max=ion_radius_leave_max,
+        inside_mask=((jnp.arange(nx, dtype=jnp.float32)[:, None] * dx - x_center) ** 2
+                     + (jnp.arange(ny, dtype=jnp.float32)[None, :] * dy - y_center) ** 2)
+        < radius_anode**2,
     )
     runtime = RuntimeState(
         dt=dt,
