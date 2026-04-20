@@ -4,6 +4,7 @@ from typing import NamedTuple
 
 import jax
 import jax.numpy as jnp
+import jax.scipy.linalg as jsp_linalg
 import numpy as np
 
 from .geometry import circular_domain_mask
@@ -14,7 +15,7 @@ EPSILON_0 = 8.854187817620389e-12
 
 class DirectPoissonData(NamedTuple):
     interior_indices: jax.Array
-    inverse_operator: jax.Array
+    cholesky_lower: jax.Array
 
 
 def _mask_inside(arr, inside_mask):
@@ -120,16 +121,17 @@ def build_direct_poisson_data(geometry: GeometryState) -> DirectPoissonData:
                 neighbor_flat = ni * ny + nj
                 operator[local_idx, flat_to_local[neighbor_flat]] = coeff
 
-    inverse_operator = np.linalg.inv(operator).astype(np.float32)
+    cholesky_lower = np.linalg.cholesky(operator).astype(np.float32)
     return DirectPoissonData(
         interior_indices=jnp.asarray(interior_indices, dtype=jnp.int32),
-        inverse_operator=jnp.asarray(inverse_operator, dtype=jnp.float32),
+        cholesky_lower=jnp.asarray(cholesky_lower, dtype=jnp.float32),
     )
 
 
 def solve_poisson_direct(rho: jax.Array, direct_data: DirectPoissonData):
     rhs = jnp.take((rho / EPSILON_0).reshape(-1), direct_data.interior_indices)
-    phi_interior = direct_data.inverse_operator @ rhs
+    y = jsp_linalg.solve_triangular(direct_data.cholesky_lower, rhs, lower=True)
+    phi_interior = jsp_linalg.solve_triangular(direct_data.cholesky_lower.T, y, lower=False)
     phi_flat = jnp.zeros((rho.size,), dtype=jnp.float32)
     phi_flat = phi_flat.at[direct_data.interior_indices].set(phi_interior)
     return phi_flat.reshape(rho.shape)
