@@ -68,14 +68,12 @@ def remove_on_anode(pool: ParticlePool, geometry: GeometryState):
 
 def remove_some_ions_on_cold_cathode(pool: ParticlePool, key, geometry: GeometryState, runtime: RuntimeState):
     candidates = pool.alive & inside_cold_cathode_ring(pool.x, pool.y, geometry)
-    candidate_idx = jnp.where(candidates, size=pool.alive.shape[0], fill_value=-1)[0]
-    perm = jax.random.permutation(key, candidate_idx.shape[0])
-    picked = candidate_idx[perm]
-    valid = (jnp.arange(pool.alive.shape[0]) < runtime.ion_leave_count) & (picked >= 0)
-    safe = jnp.where(valid, picked, 0)
+    perm = jax.random.permutation(key, pool.alive.shape[0])
+    shuffled_candidates = candidates[perm]
+    chosen_in_perm = shuffled_candidates & (jnp.cumsum(shuffled_candidates.astype(jnp.int32)) <= runtime.ion_leave_count)
     kill_mask = jnp.zeros_like(pool.alive)
-    kill_mask = kill_mask.at[safe].set(valid)
-    removed = valid.astype(jnp.int32).sum()
+    kill_mask = kill_mask.at[perm].set(chosen_in_perm)
+    removed = chosen_in_perm.astype(jnp.int32).sum()
     return deactivate(pool, kill_mask), removed
 
 

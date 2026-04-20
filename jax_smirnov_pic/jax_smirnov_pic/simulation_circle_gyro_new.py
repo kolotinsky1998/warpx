@@ -218,6 +218,12 @@ def _step_kernel_impl(state, tables, config: SimulationConfig):
     with jax.named_scope("anode_loss"):
         electrons, removed_e = remove_on_anode(electrons, state.geometry)
         counters = counters._replace(ntot_anode_leave=counters.ntot_anode_leave + removed_e)
+        ions = jax.lax.cond(
+            do_ion_push,
+            lambda pool: remove_on_anode(pool, state.geometry)[0],
+            lambda pool: pool,
+            ions,
+        )
 
     do_cold_sink = jnp.equal(jnp.mod(state.step, config.ion_leave_step), 0)
     rng_key, sink_key = jax.random.split(rng_key)
@@ -381,6 +387,8 @@ def step_once_profiled(state, tables, config: SimulationConfig):
 
     electrons, removed_e = _timed_stage(profile_row, "anode_loss_s", lambda: remove_on_anode(electrons, state.geometry))
     counters = counters._replace(ntot_anode_leave=counters.ntot_anode_leave + removed_e)
+    if int(state.step) % state.runtime.ion_step == 0:
+        ions, _ = remove_on_anode(ions, state.geometry)
 
     if int(state.step) % config.ion_leave_step == 0:
         key5, rng_key = jax.random.split(rng_key)
