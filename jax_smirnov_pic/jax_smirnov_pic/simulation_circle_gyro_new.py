@@ -24,9 +24,11 @@ from .gyro import gyro_push
 from .particles import boris_push
 from .poisson import (
     build_direct_poisson_data,
+    build_fft_capacitance_data,
     compute_electric_field,
     solve_poisson_cg,
     solve_poisson_direct,
+    solve_poisson_fft_capacitance,
     solve_poisson_weighted_jacobi,
 )
 from .sources_sinks import (
@@ -147,11 +149,27 @@ def _cold_secondary_kernel(electrons, rng_key, geometry, runtime):
     return electrons
 
 
+def _solve_poisson(rho, state, tables, config: SimulationConfig):
+    if config.poisson_solver == "direct_inverse":
+        return solve_poisson_direct(rho, tables["poisson_direct"])
+    if config.poisson_solver == "fft_capacitance":
+        return solve_poisson_fft_capacitance(rho, tables["poisson_fft_capacitance"])
+    if config.poisson_solver == "cg":
+        return solve_poisson_cg(state.fields.phi, rho, state.geometry, config.poisson_iterations, config.poisson_tol)
+    return solve_poisson_weighted_jacobi(
+        state.fields.phi,
+        rho,
+        state.geometry,
+        config.poisson_omega,
+        config.poisson_iterations,
+    )
+
+
 def _step_kernel_impl(state, tables, config: SimulationConfig):
     rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state), state.fields.rho_e)
     rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state), state.fields.rho_i)
     rho = rho_filter_new(rho_e + rho_i, state.geometry.nr_anode)
-    phi = solve_poisson_direct(rho, tables["poisson_direct"])
+    phi = _solve_poisson(rho, state, tables, config)
     ex_grid, ey_grid = compute_electric_field(phi, state.geometry)
     ex_e, ey_e = linear_field_gather(state.electrons, ex_grid, ey_grid, state.geometry)
     ex_i, ey_i = linear_field_gather(state.ions, ex_grid, ey_grid, state.geometry)
@@ -260,7 +278,7 @@ def step_once_profiled(state, tables, config: SimulationConfig):
     phi = _timed_stage(
         profile_row,
         "poisson_s",
-        lambda: solve_poisson_direct(rho, tables["poisson_direct"]),
+        lambda: _solve_poisson(rho, state, tables, config),
     )
     ex_grid, ey_grid = _timed_stage(profile_row, "field_from_phi_s", lambda: compute_electric_field(phi, state.geometry))
     ex_e, ey_e = _timed_stage(
@@ -426,8 +444,11 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
         "electron_elastic": load_cross_section(config.cross_sections.electron_elastic),
         "electron_ionization": load_cross_section(config.cross_sections.electron_ionization),
         "ion_elastic": load_cross_section(config.cross_sections.ion_elastic),
-        "poisson_direct": build_direct_poisson_data(state.geometry),
     }
+    if config.poisson_solver == "direct_inverse":
+        tables["poisson_direct"] = build_direct_poisson_data(state.geometry)
+    elif config.poisson_solver == "fft_capacitance":
+        tables["poisson_fft_capacitance"] = build_fft_capacitance_data(state.geometry)
 
     append_csv_row(out_dir / "counters.csv", counters_row(0, state.electrons, state.ions, state.geometry, state.counters))
     save_matrix_txt(out_dir / "rho_e_0.txt", state.fields.rho_e)

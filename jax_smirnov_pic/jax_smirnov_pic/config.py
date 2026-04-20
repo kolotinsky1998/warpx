@@ -59,6 +59,7 @@ class SimulationConfig:
     poisson_omega: float
     poisson_iterations: int
     poisson_tol: float
+    poisson_solver: str
     log_interval: int
     field_dump_interval: int
     max_electrons: int
@@ -109,6 +110,7 @@ def smirnov_default_config(output_dir: str | None = None) -> SimulationConfig:
         poisson_omega=0.85,
         poisson_iterations=250,
         poisson_tol=1.0e-4,
+        poisson_solver="direct_inverse",
         log_interval=100,
         field_dump_interval=10_000,
         max_electrons=300_000,
