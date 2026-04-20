@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import math
+from pathlib import Path
 import time
 
 import jax
 import jax.numpy as jnp
+import jax.profiler
 
 from .collisions import (
     apply_electron_elastic,
@@ -166,73 +168,86 @@ def _solve_poisson(rho, state, tables, config: SimulationConfig):
 
 
 def _step_kernel_impl(state, tables, config: SimulationConfig):
-    rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state), state.fields.rho_e)
-    rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state), state.fields.rho_i)
-    rho = rho_filter_new(rho_e + rho_i, state.geometry.nr_anode)
-    phi = _solve_poisson(rho, state, tables, config)
-    ex_grid, ey_grid = compute_electric_field(phi, state.geometry)
-    ex_e, ey_e = linear_field_gather(state.electrons, ex_grid, ey_grid, state.geometry)
-    ex_i, ey_i = linear_field_gather(state.ions, ex_grid, ey_grid, state.geometry)
-    electrons = state.electrons._replace(ex=ex_e, ey=ey_e)
-    ions = state.ions._replace(ex=ex_i, ey=ey_i)
+    with jax.named_scope("deposit"):
+        rho_e = linear_charge_deposition(state.electrons, state.geometry, _electron_charge(state), state.fields.rho_e)
+        rho_i = linear_charge_deposition(state.ions, state.geometry, _ion_charge(state), state.fields.rho_i)
+    with jax.named_scope("rho_filter"):
+        rho = rho_filter_new(rho_e + rho_i, state.geometry.nr_anode)
+    with jax.named_scope("poisson"):
+        phi = _solve_poisson(rho, state, tables, config)
+    with jax.named_scope("field_from_phi"):
+        ex_grid, ey_grid = compute_electric_field(phi, state.geometry)
+    with jax.named_scope("gather"):
+        ex_e, ey_e = linear_field_gather(state.electrons, ex_grid, ey_grid, state.geometry)
+        ex_i, ey_i = linear_field_gather(state.ions, ex_grid, ey_grid, state.geometry)
+        electrons = state.electrons._replace(ex=ex_e, ey=ey_e)
+        ions = state.ions._replace(ex=ex_i, ey=ey_i)
 
-    electrons = gyro_push(electrons, state.runtime.dt, -EV, E_M)
+    with jax.named_scope("push_electrons"):
+        electrons = gyro_push(electrons, state.runtime.dt, -EV, E_M)
     do_ion_push = jnp.equal(jnp.mod(state.step, state.runtime.ion_step), 0)
-    ions = jax.lax.cond(
-        do_ion_push,
-        lambda pool: boris_push(pool, state.runtime.dt * state.runtime.ion_step, EV, config.m_ion),
-        lambda pool: pool,
-        ions,
-    )
+    with jax.named_scope("push_ions"):
+        ions = jax.lax.cond(
+            do_ion_push,
+            lambda pool: boris_push(pool, state.runtime.dt * state.runtime.ion_step, EV, config.m_ion),
+            lambda pool: pool,
+            ions,
+        )
 
     counters = state.counters
     rng_key = state.rng_key
 
     do_electron_collisions = jnp.equal(jnp.mod(state.step, config.collision_step_electron), 0)
-    electrons, ions, counters, rng_key = jax.lax.cond(
-        do_electron_collisions,
-        lambda args: _electron_collisions_kernel(args[0], args[1], args[2], args[3], state.runtime, tables, config),
-        lambda args: args,
-        (electrons, ions, counters, rng_key),
-    )
+    with jax.named_scope("electron_collisions"):
+        electrons, ions, counters, rng_key = jax.lax.cond(
+            do_electron_collisions,
+            lambda args: _electron_collisions_kernel(args[0], args[1], args[2], args[3], state.runtime, tables, config),
+            lambda args: args,
+            (electrons, ions, counters, rng_key),
+        )
 
     do_ion_collisions = jnp.equal(jnp.mod(state.step, config.collision_step_ion), 0)
-    ions, rng_key = jax.lax.cond(
-        do_ion_collisions,
-        lambda args: _ion_collisions_kernel(args[0], args[1], state.runtime, tables, config),
-        lambda args: args,
-        (ions, rng_key),
-    )
+    with jax.named_scope("ion_collisions"):
+        ions, rng_key = jax.lax.cond(
+            do_ion_collisions,
+            lambda args: _ion_collisions_kernel(args[0], args[1], state.runtime, tables, config),
+            lambda args: args,
+            (ions, rng_key),
+        )
 
-    electrons, removed_e = remove_on_anode(electrons, state.geometry)
-    counters = counters._replace(ntot_anode_leave=counters.ntot_anode_leave + removed_e)
+    with jax.named_scope("anode_loss"):
+        electrons, removed_e = remove_on_anode(electrons, state.geometry)
+        counters = counters._replace(ntot_anode_leave=counters.ntot_anode_leave + removed_e)
 
     do_cold_sink = jnp.equal(jnp.mod(state.step, config.ion_leave_step), 0)
     rng_key, sink_key = jax.random.split(rng_key)
-    ions, counters = jax.lax.cond(
-        do_cold_sink,
-        lambda args: _cold_sink_kernel(*args),
-        lambda args: args[:2],
-        (ions, counters, sink_key, state.geometry, state.runtime),
-    )
+    with jax.named_scope("cold_cathode_sink"):
+        ions, counters = jax.lax.cond(
+            do_cold_sink,
+            lambda args: _cold_sink_kernel(*args),
+            lambda args: args[:2],
+            (ions, counters, sink_key, state.geometry, state.runtime),
+        )
 
     do_hot_emit = jnp.equal(jnp.mod(state.step, config.electron_emission_hot_step), 0)
     rng_key, hot_key = jax.random.split(rng_key)
-    electrons, counters = jax.lax.cond(
-        do_hot_emit,
-        lambda args: _hot_emission_kernel(*args),
-        lambda args: args[:2],
-        (electrons, counters, hot_key, state.geometry, state.runtime),
-    )
+    with jax.named_scope("hot_cathode_emission"):
+        electrons, counters = jax.lax.cond(
+            do_hot_emit,
+            lambda args: _hot_emission_kernel(*args),
+            lambda args: args[:2],
+            (electrons, counters, hot_key, state.geometry, state.runtime),
+        )
 
     do_cold_emit = jnp.equal(jnp.mod(state.step, config.electron_emission_cold_step), 0)
     rng_key, cold_key = jax.random.split(rng_key)
-    electrons = jax.lax.cond(
-        do_cold_emit,
-        lambda args: _cold_secondary_kernel(*args),
-        lambda args: args[0],
-        (electrons, cold_key, state.geometry, state.runtime),
-    )
+    with jax.named_scope("cold_secondary_emission"):
+        electrons = jax.lax.cond(
+            do_cold_emit,
+            lambda args: _cold_secondary_kernel(*args),
+            lambda args: args[0],
+            (electrons, cold_key, state.geometry, state.runtime),
+        )
 
     return state._replace(
         electrons=electrons,
@@ -427,7 +442,14 @@ def _compute_block_size(config: SimulationConfig) -> int:
     return max(1, block)
 
 
-def run_simulation(config: SimulationConfig | None = None, profile: bool = False, profile_summary_only: bool = False):
+def run_simulation(
+    config: SimulationConfig | None = None,
+    profile: bool = False,
+    profile_summary_only: bool = False,
+    trace_dir: str | None = None,
+    trace_start_step: int = 0,
+    trace_num_steps: int = 0,
+):
     config = config or smirnov_default_config()
     out_dir = ensure_output_dir(config.output_dir)
     write_metadata(
@@ -435,6 +457,9 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
         {
             "config": asdict(config),
             "profiling_enabled": profile,
+            "trace_dir": trace_dir,
+            "trace_start_step": trace_start_step,
+            "trace_num_steps": trace_num_steps,
             "execution_mode": "profiled_python_loop" if profile else "jit_block_loop",
         },
     )
@@ -498,13 +523,28 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
 
     block_size = _compute_block_size(config)
     steps_done = 0
+    trace_path = Path(trace_dir) if trace_dir else None
+    trace_active = False
+    trace_end_step = trace_start_step + trace_num_steps if trace_num_steps > 0 else None
     while steps_done < config.it_num:
+        if trace_path is not None and not trace_active and steps_done >= trace_start_step:
+            trace_path.mkdir(parents=True, exist_ok=True)
+            jax.profiler.start_trace(str(trace_path))
+            trace_active = True
         num_steps = min(block_size, config.it_num - steps_done)
-        state = run_steps_block_jitted(state, tables, config, num_steps)
+        if trace_active:
+            with jax.profiler.StepTraceAnnotation("sim_block", step_num=steps_done):
+                state = run_steps_block_jitted(state, tables, config, num_steps)
+        else:
+            state = run_steps_block_jitted(state, tables, config, num_steps)
         _block_particles(state.electrons)
         _block_particles(state.ions)
         _block_fields(state.fields)
         steps_done += num_steps
+        if trace_active and trace_end_step is not None and steps_done >= trace_end_step:
+            jax.profiler.stop_trace()
+            trace_active = False
+            trace_path = None
         current_step = int(state.step)
         if current_step % config.log_interval == 0:
             append_csv_row(out_dir / "counters.csv", counters_row(current_step, state.electrons, state.ions, state.geometry, state.counters))
@@ -512,5 +552,8 @@ def run_simulation(config: SimulationConfig | None = None, profile: bool = False
             save_matrix_txt(out_dir / f"rho_e_{current_step}.txt", state.fields.rho_e)
             save_matrix_txt(out_dir / f"rho_i_{current_step}.txt", state.fields.rho_i)
             save_matrix_txt(out_dir / f"phi_{current_step}.txt", state.fields.phi)
+
+    if trace_active:
+        jax.profiler.stop_trace()
 
     return state
