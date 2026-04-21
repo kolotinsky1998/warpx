@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from .state import ParticlePool
 
 
-def boris_push(pool: ParticlePool, dt: float, charge: float, mass: float) -> ParticlePool:
+def boris_update_velocity(pool: ParticlePool, dt: float, charge: float, mass: float) -> ParticlePool:
     q_over_m = charge / mass
     tx = q_over_m * pool.bx * 0.5 * dt
     ty = q_over_m * pool.by * 0.5 * dt
@@ -31,14 +31,19 @@ def boris_push(pool: ParticlePool, dt: float, charge: float, mass: float) -> Par
     vx = v_plus_x + q_over_m * pool.ex * 0.5 * dt
     vy = v_plus_y + q_over_m * pool.ey * 0.5 * dt
     vz = v_plus_z
-    x = pool.x + vx * dt
-    y = pool.y + vy * dt
     vx = jnp.where(pool.alive, vx, pool.vx)
     vy = jnp.where(pool.alive, vy, pool.vy)
     vz = jnp.where(pool.alive, vz, pool.vz)
+    return pool._replace(vx=vx, vy=vy, vz=vz, vx_c=vx, vy_c=vy, vz_c=vz)
+
+
+def boris_push(pool: ParticlePool, dt: float, charge: float, mass: float) -> ParticlePool:
+    pool = boris_update_velocity(pool, dt, charge, mass)
+    x = pool.x + pool.vx * dt
+    y = pool.y + pool.vy * dt
     x = jnp.where(pool.alive, x, pool.x)
     y = jnp.where(pool.alive, y, pool.y)
-    return pool._replace(x=x, y=y, vx=vx, vy=vy, vz=vz)
+    return pool._replace(x=x, y=y)
 
 
 def first_free_slots(alive: jax.Array, count: int):

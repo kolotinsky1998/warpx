@@ -22,8 +22,8 @@ from .config import E_M, EV, smirnov_default_config, SimulationConfig
 from .diagnostics import counters_row
 from .interpolation import linear_charge_deposition, linear_field_gather, rho_filter_new
 from .io import append_csv_row, ensure_output_dir, save_matrix_txt, write_json, write_metadata
-from .gyro import gyro_push
-from .particles import boris_push
+from .gyro import gyro_push, gyro_update_velocity
+from .particles import boris_push, boris_update_velocity
 from .poisson import (
     build_direct_poisson_data,
     build_fft_capacitance_data,
@@ -61,6 +61,8 @@ def initialize_particles(state, config: SimulationConfig):
     key_e, key_i, new_key = jax.random.split(state.rng_key, 3)
     electrons = inject_initial_disk(state.electrons, key_e, state.geometry, ntot_seed, speed_std_e)
     ions = inject_initial_disk(state.ions, key_i, state.geometry, ntot_seed, speed_std_i)
+    electrons = gyro_update_velocity(electrons, -0.5 * state.runtime.dt, -EV, E_M)
+    ions = boris_update_velocity(ions, -0.5 * state.runtime.dt * state.runtime.ion_step, EV, config.m_ion)
     return state._replace(electrons=electrons, ions=ions, rng_key=new_key)
 
 
